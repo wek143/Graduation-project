@@ -1,0 +1,10 @@
+Java/target/
+Java/.mvn/repository/
+.idea/
+.vscode/
+*.iml
+Java/.idea/
+Java/.vscode/
+Java/.kilo/
+Java/run.out
+Java/run.err

@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XX大学编码作业自动批改平台</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<div class="page-grid"></div>
+<div class="page-aurora aurora-a"></div>
+<div class="page-aurora aurora-b"></div>
+<div class="page-aurora aurora-c"></div>
+
+<div class="page-shell">
+    <header class="topbar">
+        <a class="brand" href="#/launch">
+            <span class="brand-mark">AG</span>
+            <span class="brand-copy">
+                <strong>XX大学编码作业自动批改平台</strong>
+                <small>Code Assignment Auto Grading Platform</small>
+            </span>
+        </a>
+
+        <div id="publicNav" class="topbar-actions topbar-actions-public">
+            <button id="launchNavButton" class="btn btn-ghost">产品首页</button>
+            <button id="navLoginButton" class="btn btn-ghost">登录</button>
+            <button id="navRegisterButton" class="btn btn-primary">进入系统</button>
+        </div>
+
+        <div id="privateNav" class="topbar-actions hidden">
+            <div class="session-pill">
+                <span id="currentUsername">未登录</span>
+                <small id="currentRoleLabel">请先登录系统</small>
+            </div>
+            <button id="refreshDashboardButton" class="btn btn-secondary">刷新数据</button>
+            <button id="logoutButton" class="btn btn-ghost">退出登录</button>
+        </div>
+    </header>
+
+    <main class="view-stack">
+        <section id="launchView" class="view-section">
+            <section class="launch-stage">
+                <div class="launch-command panel-obsidian">
+                    <div class="hero-copy">
+                        <div class="hero-badges">
+                            <span class="eyebrow">Campus Coding Platform</span>
+                            <span class="status-ribbon">Teacher / Student / Auto Judge</span>
+                        </div>
+                        <h1>XX大学编码作业自动批改平台</h1>
+                        <p class="hero-text">统一完成作业发布、代码提交与自动评测。</p>
+                        <div class="hero-actions">
+                            <button id="launchLoginButton" class="btn btn-primary">登录工作台</button>
+                            <button id="launchRegisterButton" class="btn btn-ghost btn-ghost-inverse">新建账号</button>
+                        </div>
+                    </div>
+
+                    <div class="hero-preview">
+                        <div class="preview-window">
+                            <div class="preview-toolbar">
+                                <span>平台模块</span>
+                                <small>实时工作台</small>
+                            </div>
+                            <div class="preview-grid">
+                                <article class="preview-module">
+                                    <span>教师端</span>
+                                    <strong>作业发布</strong>
+                                </article>
+                                <article class="preview-module">
+                                    <span>学生端</span>
+                                    <strong>代码提交</strong>
+                                </article>
+                                <article class="preview-module">
+                                    <span>系统端</span>
+                                    <strong>自动批改</strong>
+                                </article>
+                            </div>
+                            <div class="preview-board">
+                                <article class="preview-row">
+                                    <div>
+                                        <strong>作业创建与用例配置</strong>
+                                    </div>
+                                    <span class="preview-pill preview-pill-good">教师端</span>
+                                </article>
+                                <article class="preview-row">
+                                    <div>
+                                        <strong>作业选择与在线提交</strong>
+                                    </div>
+                                    <span class="preview-pill">学生端</span>
+                                </article>
+                                <article class="preview-row">
+                                    <div>
+                                        <strong>结果反馈与详情查看</strong>
+                                    </div>
+                                    <span class="preview-pill preview-pill-soft">自动评测</span>
+                                </article>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="launch-columns">
+                    <aside class="panel panel-paper access-panel">
+                        <div class="panel-heading">
+                            <span class="panel-kicker">Quick Entry</span>
+                            <h2>快速进入系统</h2>
+                        </div>
+
+                        <div class="demo-list">
+                            <article class="demo-card">
+                                <div>
+                                    <strong>管理员账号</strong>
+                                    <p>admin1 / 123456</p>
+                                </div>
+                                <button class="btn btn-ghost use-demo-button" data-demo-role="admin">填入管理员账号</button>
+                            </article>
+                            <article class="demo-card">
+                                <div>
+                                    <strong>教师账号</strong>
+                                    <p>teacher1 / 123456</p>
+                                </div>
+                                <button class="btn btn-ghost use-demo-button" data-demo-role="teacher">填入教师账号</button>
+                            </article>
+                            <article class="demo-card">
+                                <div>
+                                    <strong>学生账号</strong>
+                                    <p>student1 / 123456</p>
+                                </div>
+                                <button class="btn btn-ghost use-demo-button" data-demo-role="student">填入学生账号</button>
+                            </article>
+                        </div>
+
+                        <div class="access-note">
+                            <strong>当前入口</strong>
+                            <p>`/#/login`</p>
+                        </div>
+                    </aside>
+
+                    <section class="panel panel-paper capability-panel">
+                        <div class="panel-heading">
+                            <span class="panel-kicker">Platform</span>
+                            <h2>核心能力</h2>
+                        </div>
+
+                        <div class="capability-grid">
+                            <article class="capability-card">
+                                <span>01</span>
+                                <div>
+                                    <h3>教师发布作业</h3>
+                                    <p>题目、用例、截止时间统一配置。</p>
+                                </div>
+                            </article>
+                            <article class="capability-card">
+                                <span>02</span>
+                                <div>
+                                    <h3>学生在线提交</h3>
+                                    <p>选择作业后直接提交 Java 代码。</p>
+                                </div>
+                            </article>
+                            <article class="capability-card">
+                                <span>03</span>
+                                <div>
+                                    <h3>自动批改反馈</h3>
+                                    <p>即时返回编译、运行和得分结果。</p>
+                                </div>
+                            </article>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </section>
+
+        <section id="authView" class="view-section hidden">
+            <div class="auth-stage">
+                <section class="auth-side panel-obsidian">
+                    <div class="panel-heading">
+                        <span class="eyebrow">Secure Entry</span>
+                        <h2 id="authTitle">登录系统</h2>
+                        <p id="authSubtitle" class="auth-copy">登录后进入对应工作台。</p>
+                    </div>
+
+                    <div class="auth-side-grid">
+                        <article class="auth-side-card">
+                            <strong>教师运营视角</strong>
+                            <p>发布作业与查看统计。</p>
+                        </article>
+                        <article class="auth-side-card">
+                            <strong>学生提交流程</strong>
+                            <p>提交代码与查看结果。</p>
+                        </article>
+                    </div>
+
+                    <div class="auth-side-metrics">
+                        <article>
+                            <span>Unified Entry</span>
+                            <strong>1</strong>
+                        </article>
+                        <article>
+                            <span>Core Roles</span>
+                            <strong>2</strong>
+                        </article>
+                        <article>
+                            <span>Judge Feedback</span>
+                            <strong>Real-time</strong>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="auth-console panel-paper">
+                    <div class="panel-heading compact-heading">
+                        <span class="panel-kicker">Access Console</span>
+                        <h3>开始进入工作台</h3>
+                    </div>
+
+                    <div class="auth-switch">
+                        <button id="loginTabButton" class="tab-button active">登录</button>
+                        <button id="registerTabButton" class="tab-button">注册</button>
+                    </div>
+
+                    <form id="loginForm" class="form-stack">
+                        <label>
+                            <span>用户名</span>
+                            <input id="loginUsernameInput" type="text" name="username" placeholder="请输入用户名" required>
+                        </label>
+                        <label>
+                            <span>密码</span>
+                            <input id="loginPasswordInput" type="password" name="password" placeholder="请输入密码" required>
+                        </label>
+                        <button type="submit" class="btn btn-primary btn-block">登录并进入工作台</button>
+                    </form>
+
+                    <form id="registerForm" class="form-stack hidden">
+                        <label>
+                            <span>姓名</span>
+                            <input type="text" name="fullName" placeholder="例如：张三">
+                        </label>
+                        <label>
+                            <span>班级</span>
+                            <input type="text" name="className" placeholder="例如：软件工程01班">
+                        </label>
+                        <label>
+                            <span>用户名</span>
+                            <input type="text" name="username" placeholder="请输入新账号" required>
+                        </label>
+                        <label>
+                            <span>密码</span>
+                            <input type="password" name="password" placeholder="请输入密码" required>
+                        </label>
+                        <label>
+                            <span>角色</span>
+                            <select name="role">
+                                <option value="STUDENT">学生</option>
+                                <option value="TEACHER">教师</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn-secondary btn-block">注册并自动登录</button>
+                    </form>
+
+                    <div id="authMessage" class="message-box" aria-live="polite"></div>
+                    <div class="auth-footer-note">启动后默认自动打开登录页。</div>
+                </section>
+            </div>
+        </section>
+
+        <section id="appView" class="view-section hidden">
+            <section class="workspace-marquee">
+                <div class="workspace-summary panel-obsidian">
+                    <h2 id="workspaceTitle">XX大学编码作业自动批改平台</h2>
+                    <p id="workspaceDescription" class="muted">登录成功后显示当前角色的工作区。</p>
+                    <div class="workspace-meta">
+                        <span id="tokenExpiryLabel">令牌未生效</span>
+                    </div>
+                </div>
+
+                <aside class="workspace-brief panel-paper">
+                    <div class="panel-heading compact-heading">
+                        <h3>实时系统反馈</h3>
+                    </div>
+                    <div id="dashboardMessage" class="message-box workspace-message" aria-live="polite"></div>
+                </aside>
+            </section>
+
+            <section id="adminSection" class="role-section hidden">
+                <div class="portal-shell">
+                    <aside class="portal-sidebar">
+                        <div class="portal-sidebar-title">管理员功能</div>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="">首页</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-users">用户管理</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-courses">课程总览</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-assignments">作业总览</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-audit">操作日志</button>
+                    </aside>
+
+                    <div class="portal-main">
+                        <section class="portal-panel" data-module-panel="admin-home">
+                            <div class="portal-home-card">
+                                <div class="portal-home-copy">
+                                    <h3>XX大学欢迎您</h3>
+                                    <p>当前为管理员工作台，请从左侧选择模块。</p>
+                                </div>
+                                <div id="adminClock" class="portal-home-clock">--:--:--</div>
+                            </div>
+                            <div id="adminOverviewCards" class="stats-grid"></div>
+                        </section>
+
+                        <section class="portal-panel hidden" data-module-panel="admin-users">
+                            <div class="portal-panel-card">
+                                <div class="portal-panel-head">
+                                    <h3>用户管理</h3>
+                                </div>
+                                <div id="adminUserList" class="stack-list"></div>
+                            </div>
+                        </section>
+
+                        <section class="portal-panel hidden" data-module-panel="admin-courses">
+                            <div class="portal-panel-card">
+                                <div class="portal-panel-head">
+                                    <h3>课程总览</h3>
+                                </div>
+                                <div id="adminCourseList" class="stack-list"></div>
+                            </div>
+                        </section>
+
+                        <section class="portal-panel hidden" data-module-panel="admin-assignments">
+                            <div class="portal-panel-card">
+                                <div class="portal-panel-head">
+                                    <h3>作业总览</h3>
+                                </div>
+                                <div id="adminAssignmentList" class="stack-list"></div>
+                            </div>
+                        </section>
+
+                        <section class="portal-panel hidden" data-module-panel="admin-audit">
+                            <div class="portal-panel-card">
+                                <div class="portal-panel-head">
+                                    <h3>操作日志</h3>
+                                </div>
+                                <div id="adminAuditLogList" class="stack-list"></div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+
+            <section id="teacherSection" class="role-section hidden">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">Teacher Workspace</span>
+                        <h2>教师运营台</h2>
+                    </div>
+                </div>
+
+                <div id="overviewCards" class="stats-grid"></div>
+
+                <div class="workspace-grid">
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Course Console</span>
+                                    <h3>课程与选课管理</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div class="course-console-layout">
+                                    <div class="course-console-left">
+                                        <form id="courseForm" class="form-stack">
+                                            <label>
+                                                <span>课程代码</span>
+                                                <input type="text" name="code" placeholder="例如：CS101" required>
+                                            </label>
+                                            <label>
+                                                <span>课程名称</span>
+                                                <input type="text" name="name" placeholder="例如：程序设计基础" required>
+                                            </label>
+                                            <div class="split-grid">
+                                                <label>
+                                                    <span>学期</span>
+                                                    <input type="text" name="term" placeholder="例如：2026春" required>
+                                                </label>
+                                                <label>
+                                                    <span>班级</span>
+                                                    <input type="text" name="className" placeholder="例如：软件工程01班" required>
+                                                </label>
+                                            </div>
+                                            <label id="courseActiveToggle" class="toggle-field hidden">
+                                                <input id="courseActiveInput" type="checkbox" name="active" checked>
+                                                <span>课程启用</span>
+                                            </label>
+                                            <div class="split-grid">
+                                                <button id="courseSubmitButton" type="submit" class="btn btn-secondary btn-block">创建课程</button>
+                                                <button id="courseCancelEditButton" type="button" class="btn btn-ghost btn-block hidden">取消编辑</button>
+                                            </div>
+                                        </form>
+                                        <div id="teacherCourses" class="course-card-grid compact-list"></div>
+                                    </div>
+
+                                    <div class="course-console-right">
+                                        <div class="transfer-header">
+                                            <div>
+                                                <span class="panel-kicker">Enrollment</span>
+                                                <h4 id="selectedCourseTitle">选择课程后管理选课</h4>
+                                            </div>
+                                        </div>
+                                        <div class="transfer-grid">
+                                            <section class="transfer-panel">
+                                                <div class="transfer-title">待加入学生</div>
+                                                <div id="availableStudentList" class="transfer-list"></div>
+                                            </section>
+                                            <section class="transfer-actions">
+                                                <button id="enrollSelectedButton" type="button" class="btn btn-secondary">加入课程</button>
+                                                <button id="removeEnrollmentButton" type="button" class="btn btn-ghost">移出课程</button>
+                                            </section>
+                                            <section class="transfer-panel">
+                                                <div class="transfer-title">已选学生</div>
+                                                <div id="courseEnrollmentList" class="transfer-list"></div>
+                                            </section>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Bulk Import</span>
+                                    <h3>批量导入</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div class="import-stack">
+                                    <form id="importUsersForm" class="form-stack import-card">
+                                        <label>
+                                            <span>导入用户 CSV</span>
+                                            <textarea name="csvContent" rows="4" placeholder="username,password,role,fullName,className"></textarea>
+                                        </label>
+                                        <button type="submit" class="btn btn-ghost btn-block">导入用户</button>
+                                    </form>
+                                    <form id="importCoursesForm" class="form-stack import-card">
+                                        <label>
+                                            <span>导入课程 CSV</span>
+                                            <textarea name="csvContent" rows="4" placeholder="code,name,term"></textarea>
+                                        </label>
+                                        <button type="submit" class="btn btn-ghost btn-block">导入课程</button>
+                                    </form>
+                                    <form id="importEnrollmentsForm" class="form-stack import-card">
+                                        <label>
+                                            <span>导入选课 CSV</span>
+                                            <textarea name="csvContent" rows="4" placeholder="courseCode,studentUsername"></textarea>
+                                        </label>
+                                        <button type="submit" class="btn btn-ghost btn-block">导入选课</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </details>
+                    </section>
+                </div>
+
+                <div class="workspace-grid">
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Assignment Designer</span>
+                                    <h3>创建新作业</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                        <form id="assignmentForm" class="form-stack">
+                            <label>
+                                <span>作业标题</span>
+                                <input type="text" name="title" placeholder="例如：冒泡排序实验" required>
+                            </label>
+                            <label>
+                                <span>作业说明</span>
+                                <textarea name="description" rows="4" placeholder="描述实验要求、输入输出格式和评分标准" required></textarea>
+                            </label>
+                            <label>
+                                <span>截止时间</span>
+                                <input type="datetime-local" name="deadline" required>
+                            </label>
+                            <label>
+                                <span>所属课程</span>
+                                <select id="assignmentCourseSelect" name="courseId"></select>
+                            </label>
+                            <label>
+                                <span>作业状态</span>
+                                <select name="status">
+                                    <option value="PUBLISHED">已发布</option>
+                                    <option value="DRAFT">草稿</option>
+                                    <option value="CLOSED">已关闭</option>
+                                </select>
+                            </label>
+                            <div class="split-grid">
+                                <label>
+                                    <span>最多提交次数</span>
+                                    <input type="number" name="maxSubmissions" min="1" max="100" value="5" required>
+                                </label>
+                                <label>
+                                    <span>评分策略</span>
+                                    <select name="gradingPolicy">
+                                        <option value="LATEST">按最后一次提交</option>
+                                        <option value="HIGHEST">按最高分提交</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <label class="toggle-field">
+                                <input type="checkbox" name="lateSubmissionAllowed">
+                                <span>允许截止后提交</span>
+                            </label>
+                            <div class="test-case-builder">
+                                <div class="inline-header">
+                                    <h4>测试用例</h4>
+                                    <button id="addTestCaseButton" type="button" class="btn btn-small btn-ghost">新增用例</button>
+                                </div>
+                                <p class="form-hint">建议至少准备两组输入输出，以便更准确地区分通过、部分通过与失败。</p>
+                                <div id="testCaseList" class="test-case-list"></div>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">发布作业</button>
+                        </form>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Assignment Library</span>
+                                    <h3>作业与用例管理</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="teacherAssignments" class="stack-list"></div>
+                            </div>
+                        </details>
+                    </section>
+                </div>
+
+                <div class="workspace-grid">
+                    <section class="panel panel-paper collapsible-panel">
+                        <details>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Submission Monitor</span>
+                                    <h3>提交监控</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                        <div class="inline-form">
+                            <label class="grow">
+                                <span>选择作业</span>
+                                <select id="submissionAssignmentSelect"></select>
+                            </label>
+                            <button id="loadSubmissionsButton" class="btn btn-secondary">加载提交列表</button>
+                        </div>
+                        <div id="teacherSubmissions" class="stack-list"></div>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Scoring Trend</span>
+                                    <h3>评分趋势</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="assignmentStatistics" class="stack-list"></div>
+                            </div>
+                        </details>
+                    </section>
+                </div>
+
+                <section class="panel panel-paper collapsible-panel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Submission Detail</span>
+                                <h3>评测详情</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <div id="teacherSubmissionDetail" class="detail-panel empty-state">
+                                选择一条教师端提交记录后，这里会显示编译结果、运行信息和测试用例详情。
+                            </div>
+                        </div>
+                    </details>
+                </section>
+
+                <section class="panel panel-paper collapsible-panel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Audit Logs</span>
+                                <h3>操作日志</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <div id="auditLogList" class="stack-list"></div>
+                        </div>
+                    </details>
+                </section>
+            </section>
+
+            <section id="studentSection" class="role-section hidden">
+                <div class="section-heading">
+                    <div>
+                        <span class="section-kicker">Student Workspace</span>
+                        <h2>学生提交台</h2>
+                    </div>
+                </div>
+
+                <div class="workspace-grid">
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Course Overview</span>
+                                    <h3>课程选择</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="studentCourses" class="assignment-board"></div>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Assignment Board</span>
+                                    <h3>已发布作业</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="studentAssignments" class="assignment-board"></div>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details open>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Code Console</span>
+                                    <h3>代码提交</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                        <form id="submissionForm" class="form-stack">
+                            <label>
+                                <span>当前作业</span>
+                                <select id="submissionAssignmentPicker" name="assignmentId" required></select>
+                            </label>
+                            <div class="editor-shell">
+                                <div class="editor-toolbar">
+                                    <strong>Main.java</strong>
+                                    <span>Java / UTF-8 / Judge Ready</span>
+                                </div>
+                                <label class="editor-label">
+                                    <span>Java 代码</span>
+                                    <textarea id="sourceCodeInput" name="sourceCode" rows="16" spellcheck="false" required>public class Main {
+    public static void main(String[] args) {
+        java.util.Scanner scanner = new java.util.Scanner(System.in);
+        int a = scanner.nextInt();
+        int b = scanner.nextInt();
+        System.out.println(a + b);
+    }
+}</textarea>
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">提交并评测</button>
+                        </form>
+                            </div>
+                        </details>
+                    </section>
+                </div>
+
+                <div class="workspace-grid">
+                    <section class="panel panel-paper collapsible-panel">
+                        <details>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Latest Results</span>
+                                    <h3>最近提交概览</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="studentSummaries" class="stack-list"></div>
+                            </div>
+                        </details>
+                    </section>
+
+                    <section class="panel panel-paper collapsible-panel">
+                        <details>
+                            <summary class="panel-summary">
+                                <div class="panel-heading compact-heading">
+                                    <span class="panel-kicker">Judge Detail</span>
+                                    <h3>评测详情</h3>
+                                </div>
+                                <span class="accordion-indicator" aria-hidden="true"></span>
+                            </summary>
+                            <div class="panel-content">
+                                <div id="submissionDetail" class="detail-panel empty-state">
+                                    选择一条提交记录后，这里会显示编译结果、运行信息和每个测试用例的通过情况。
+                                </div>
+                            </div>
+                        </details>
+                    </section>
+                </div>
+            </section>
+        </section>
+    </main>
+</div>
+
+<div id="toastViewport" class="toast-viewport" aria-live="polite" aria-atomic="true"></div>
+
+<template id="testCaseTemplate">
+    <div class="test-case-item">
+        <div class="case-header">
+            <strong class="case-title">测试用例</strong>
+            <button type="button" class="btn btn-small btn-ghost remove-test-case">删除</button>
+        </div>
+        <label>
+            <span>输入</span>
+            <textarea class="case-input" rows="3" placeholder="例如：1 2"></textarea>
+        </label>
+        <label>
+            <span>期望输出</span>
+            <textarea class="case-output" rows="3" placeholder="例如：3"></textarea>
+        </label>
+    </div>
+</template>
+
+<script src="/app.js"></script>
+</body>
+</html>
+
