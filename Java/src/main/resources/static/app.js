@@ -51,7 +51,7 @@ const ADMIN_LIST_CONFIG = {
 };
 
 const state = {
-    auth: readJson("autograding-auth"),
+    auth: null,
     profile: null,
     assignments: [],
     courses: [],
@@ -79,7 +79,8 @@ const state = {
         student: null
     },
     route: ROUTES.launch,
-    submissionPollTimer: null
+    submissionPollTimer: null,
+    submissionPollAttempts: 0
 };
 
 const el = {
@@ -117,6 +118,13 @@ const el = {
     adminCourseList: byId("adminCourseList"),
     adminAssignmentList: byId("adminAssignmentList"),
     adminAuditLogList: byId("adminAuditLogList"),
+    adminAiSettingsForm: byId("adminAiSettingsForm"),
+    adminAiEnabledInput: byId("adminAiEnabledInput"),
+    adminAiBaseUrlInput: byId("adminAiBaseUrlInput"),
+    adminAiModelInput: byId("adminAiModelInput"),
+    adminAiApiKeyInput: byId("adminAiApiKeyInput"),
+    adminAiTimeoutInput: byId("adminAiTimeoutInput"),
+    adminAiSettingsStatus: byId("adminAiSettingsStatus"),
     teacherSection: byId("teacherSection"),
     studentSection: byId("studentSection"),
     overviewCards: byId("overviewCards"),
@@ -152,6 +160,15 @@ const el = {
     sourceCodeInput: byId("sourceCodeInput"),
     studentSummaries: byId("studentSummaries"),
     submissionDetail: byId("submissionDetail"),
+    studentAiDiagnosisPanel: byId("studentAiDiagnosisPanel"),
+    resetPasswordDialog: byId("resetPasswordDialog"),
+    resetPasswordInput: byId("resetPasswordInput"),
+    resetPasswordCancelButton: byId("resetPasswordCancelButton"),
+    confirmDialog: byId("confirmDialog"),
+    confirmDialogTitle: byId("confirmDialogTitle"),
+    confirmDialogMessage: byId("confirmDialogMessage"),
+    confirmDialogCancelButton: byId("confirmDialogCancelButton"),
+    confirmDialogOkButton: byId("confirmDialogOkButton"),
     testCaseTemplate: byId("testCaseTemplate"),
     useDemoButtons: [...document.querySelectorAll(".use-demo-button")]
 };
@@ -175,9 +192,15 @@ function boot() {
     if (el.sourceCodeInput) {
         el.sourceCodeInput.value = DEFAULT_CODE;
     }
-    setMessage(el.authMessage, "可直接使用演示账号登录。");
+    setMessage(el.authMessage, "点击下方演示账号可快速填入。");
     setMessage(el.dashboardMessage, "登录后进入对应工作台。");
     handleRouteChange();
+    const storedAuth = readJson("autograding-auth");
+    if (isStoredAuthExpired(storedAuth)) {
+        localStorage.removeItem("autograding-auth");
+        return;
+    }
+    state.auth = storedAuth;
     if (state.auth?.token) {
         hydrateSession({ silent: true });
     }
@@ -196,6 +219,7 @@ function bindEvents() {
     el.registerForm?.addEventListener("submit", onRegister);
     el.logoutButton?.addEventListener("click", onLogout);
     el.refreshDashboardButton?.addEventListener("click", hydrateSession);
+    el.adminAiSettingsForm?.addEventListener("submit", onSaveAiSettings);
     el.courseForm?.addEventListener("submit", onCreateCourse);
     el.courseCancelEditButton?.addEventListener("click", resetCourseForm);
     el.enrollSelectedButton?.addEventListener("click", onEnrollStudent);
@@ -578,6 +602,28 @@ function updatePortalClocks() {
     }
 }
 
+function isStoredAuthExpired(auth) {
+    if (!auth?.expiresAt) {
+        return false;
+    }
+    const expiresAt = new Date(auth.expiresAt);
+    return !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now();
+}
+
+function setSubmitButtonLoading(formElement, loadingText) {
+    const button = formElement?.querySelector('[type="submit"]');
+    if (!button) {
+        return () => {};
+    }
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = loadingText;
+    return () => {
+        button.disabled = false;
+        button.textContent = originalText;
+    };
+}
+
 function handleRouteChange() {
     const requestedRoute = getRouteFromHash();
     const route = resolveRoute(requestedRoute);
@@ -622,7 +668,9 @@ function renderRoute(route) {
 
 async function onLogin(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "登录中...");
+    const form = new FormData(formElement);
     setMessage(el.authMessage, "正在登录，请稍候...");
     try {
         acceptAuth(await api("/api/auth/login", {
@@ -632,12 +680,16 @@ async function onLogin(event) {
         await hydrateSession({ successMessage: "登录成功，已进入工作台。" });
     } catch (error) {
         notify(el.authMessage, error.message, "error", "登录失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
 async function onRegister(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "注册中...");
+    const form = new FormData(formElement);
     setMessage(el.authMessage, "正在注册，请稍候...");
     try {
         acceptAuth(await api("/api/auth/register", {
@@ -653,6 +705,8 @@ async function onRegister(event) {
         await hydrateSession({ successMessage: "注册成功，已自动登录并进入工作台。" });
     } catch (error) {
         notify(el.authMessage, error.message, "error", "注册失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -706,7 +760,7 @@ async function hydrateSession(options = {}) {
         resetWorkspace();
         renderSession();
         if (options.silent) {
-            setMessage(el.authMessage, "可直接使用演示账号登录。");
+            setMessage(el.authMessage, "点击下方演示账号可快速填入。");
             setMessage(el.dashboardMessage, "登录后进入对应工作台。");
         } else {
             notify(el.authMessage, error.message, "error", "登录状态异常");
@@ -761,8 +815,9 @@ async function loadTeacherDashboard(successMessage, suppressToast = false) {
 }
 
 async function loadAdminDashboard(successMessage, suppressToast = false) {
-    const [overview] = await Promise.all([
+    const [overview, aiSettings] = await Promise.all([
         api("/api/users/overview"),
+        api("/api/admin/ai-settings"),
         ...Object.keys(ADMIN_LIST_CONFIG).map((key) => loadAdminList(key))
     ]);
 
@@ -773,6 +828,7 @@ async function loadAdminDashboard(successMessage, suppressToast = false) {
         statCard("已发布作业", overview.publishedAssignmentCount, "当前开放"),
         statCard("提交总量", overview.submissionCount, "全局记录")
     ].join("");
+    renderAdminAiSettings(aiSettings);
 
     const message = successMessage || "管理员工作台数据已刷新。";
     if (suppressToast) {
@@ -947,7 +1003,8 @@ async function onDeleteCourse(courseId) {
         notify(el.dashboardMessage, "未找到要删除的课程。", "error", "删除失败");
         return;
     }
-    if (!window.confirm(`确定删除课程“${course.code} · ${course.name}”吗？`)) {
+    const confirmed = await showConfirmDialog("删除课程", `确定删除课程“${course.code} · ${course.name}”吗？`);
+    if (!confirmed) {
         return;
     }
     try {
@@ -1057,6 +1114,7 @@ async function onImportCsv(event, importType) {
 async function onCreateAssignment(event) {
     event.preventDefault();
     const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "发布中...");
     const form = new FormData(formElement);
     try {
         await api("/api/assignments", {
@@ -1079,6 +1137,8 @@ async function onCreateAssignment(event) {
         await loadTeacherDashboard("作业已创建并刷新到列表中。");
     } catch (error) {
         notify(el.dashboardMessage, error.message, "error", "发布失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -1111,7 +1171,9 @@ async function loadTeacherSubmissionsWithOptions(options = {}) {
 
 async function onSubmitCode(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "提交中...");
+    const form = new FormData(formElement);
     try {
         const submission = await api("/api/submissions", {
             method: "POST",
@@ -1128,6 +1190,8 @@ async function onSubmitCode(event) {
         await loadStudentDashboard("提交成功，已加入后台评测队列。");
     } catch (error) {
         notify(el.dashboardMessage, error.message, "error", "提交失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -1274,7 +1338,7 @@ function renderTeacherAssignments(assignments) {
                     <span class="accordion-indicator" aria-hidden="true"></span>
                 </summary>
                 <div class="assignment-body">
-                    <p>${escapeHtml(item.description)}</p>
+                    <p>${escapeMultilineText(item.description)}</p>
                     <div class="stack-meta">
                         <span>${item.gradingPolicy === "HIGHEST" ? "按最高分计入" : "按最后一次计入"}</span>
                         <span>${item.lateSubmissionAllowed ? "允许逾期提交" : "不允许逾期提交"}</span>
@@ -1283,8 +1347,8 @@ function renderTeacherAssignments(assignments) {
                         ${item.testCases.map((testCase, index) => `
                             <div class="test-case-item">
                                 <strong>用例 ${index + 1}</strong>
-                                <div class="mini-meta"><span>输入：${escapeHtml(testCase.inputData)}</span></div>
-                                <div class="mini-meta"><span>输出：${escapeHtml(testCase.expectedOutput)}</span></div>
+                                <div class="mini-meta"><span>输入：${escapeMultilineText(testCase.inputData)}</span></div>
+                                <div class="mini-meta"><span>输出：${escapeMultilineText(testCase.expectedOutput)}</span></div>
                             </div>
                         `).join("")}
                     </div>
@@ -1327,7 +1391,8 @@ function renderTeacherAssignments(assignments) {
 
     el.teacherAssignments.querySelectorAll("[data-action='delete-assignment']").forEach((button) => {
         button.addEventListener("click", async () => {
-            if (!window.confirm("删除后无法恢复，确认继续吗？")) {
+            const confirmed = await showConfirmDialog("删除作业", "删除后无法恢复，确认继续吗？");
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1366,7 +1431,7 @@ function renderAdminUsers(items) {
 
     el.adminUserList.querySelectorAll("[data-user-reset-id]").forEach((button) => {
         button.addEventListener("click", async () => {
-            const newPassword = window.prompt("请输入新的登录密码：", "123456");
+            const newPassword = await showResetPasswordDialog();
             if (newPassword === null) {
                 return;
             }
@@ -1390,7 +1455,8 @@ function renderAdminUsers(items) {
         button.addEventListener("click", async () => {
             const nextActive = button.dataset.userActive !== "true";
             const actionText = nextActive ? "启用" : "禁用";
-            if (!window.confirm(`确定要${actionText}该账号吗？`)) {
+            const confirmed = await showConfirmDialog(`${actionText}账号`, `确定要${actionText}该账号吗？`);
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1462,6 +1528,48 @@ function renderAdminAuditLogs(items) {
             </div>
         </article>
     `).join("") : `<div class="empty-state">暂无操作日志。</div>`;
+}
+
+function renderAdminAiSettings(settings) {
+    if (!settings || !el.adminAiSettingsForm) {
+        return;
+    }
+    el.adminAiEnabledInput.checked = Boolean(settings.enabled);
+    el.adminAiBaseUrlInput.value = settings.baseUrl || "";
+    el.adminAiModelInput.value = settings.model || "";
+    el.adminAiApiKeyInput.value = "";
+    el.adminAiTimeoutInput.value = String(settings.timeoutSeconds || 20);
+    setMessage(
+        el.adminAiSettingsStatus,
+        settings.apiKeyConfigured
+            ? "当前已配置 API Key，可直接使用 AI 辅助分析。"
+            : "当前未配置 API Key，学生端无法调用 AI 分析。"
+    );
+}
+
+async function onSaveAiSettings(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+        const payload = {
+            enabled: el.adminAiEnabledInput.checked,
+            baseUrl: String(form.get("baseUrl") || "").trim(),
+            model: String(form.get("model") || "").trim(),
+            timeoutSeconds: Number(form.get("timeoutSeconds") || 20)
+        };
+        const apiKey = String(form.get("apiKey") || "").trim();
+        if (apiKey) {
+            payload.apiKey = apiKey;
+        }
+        const settings = await api("/api/admin/ai-settings", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        renderAdminAiSettings(settings);
+        notify(el.dashboardMessage, "AI 配置已保存并立即生效。", "success", "保存成功");
+    } catch (error) {
+        notify(el.adminAiSettingsStatus, error.message, "error", "保存失败");
+    }
 }
 
 function renderTeacherStatistics() {
@@ -1706,7 +1814,8 @@ function renderTeacherSubmissions(items) {
 
     el.teacherSubmissions.querySelectorAll("[data-submission-rejudge-id]").forEach((button) => {
         button.addEventListener("click", async () => {
-            if (!window.confirm("确定重新判题这条提交记录吗？")) {
+            const confirmed = await showConfirmDialog("重新判题", "确定重新判题这条提交记录吗？");
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1731,7 +1840,7 @@ function renderStudentAssignments(assignments) {
                 <h4>${escapeHtml(item.title)}</h4>
                 <span class="pill ${statusClass(item.status)}">${translateStatus(item.status)}</span>
             </div>
-            <p>${escapeHtml(item.description)}</p>
+            <p>${escapeMultilineText(item.description)}</p>
             <div class="card-meta">
                 ${item.courseName ? `<span>课程：${escapeHtml(item.courseName)}</span>` : ""}
                 <span>教师：${escapeHtml(item.teacherName)}</span>
@@ -1856,6 +1965,8 @@ function renderSubmissionDetail(target, submission) {
         target.textContent = "暂无可展示的评测详情。";
         return;
     }
+    const aiPanel = target === el.submissionDetail ? el.studentAiDiagnosisPanel : null;
+    resetAiDiagnosisPanel(aiPanel);
     const caseResults = submission.caseResults || [];
     const cases = caseResults.length ? caseResults.map((item) => `
         <article class="case-result-card">
@@ -1883,11 +1994,102 @@ function renderSubmissionDetail(target, submission) {
                 <span>分数：${submission.score ?? 0}</span>
                 <span>提交时间：${formatDateTime(submission.submittedAt)}</span>
             </div>
+            ${aiPanel ? `<div class="stack-actions">
+                <button class="btn btn-small btn-secondary" data-ai-diagnosis-id="${submission.id}" ${submission.status === "PENDING" ? "disabled" : ""}>
+                    ${submission.status === "PENDING" ? "评测中" : "AI 辅助分析"}
+                </button>
+            </div>` : ""}
         </article>
         <article class="detail-block"><strong>编译信息</strong><pre>${escapeHtml(submission.compileMessage || "")}</pre></article>
         <article class="detail-block"><strong>运行信息</strong><pre>${escapeHtml(submission.runtimeMessage || "")}</pre></article>
         <article class="detail-block"><strong>提交源码</strong><pre>${escapeHtml(submission.sourceCode || "")}</pre></article>
         ${cases}
+    `;
+
+    const aiButton = target.querySelector("[data-ai-diagnosis-id]");
+    if (aiButton) {
+        aiButton.addEventListener("click", async () => {
+            await loadAiDiagnosis(submission.id, aiPanel, aiButton);
+        });
+    }
+}
+
+function resetAiDiagnosisPanel(target) {
+    if (!target) {
+        return;
+    }
+    target.className = "detail-panel empty-state";
+    target.textContent = "发起 AI 辅助分析后，这里会显示问题概述、修改建议和知识点提示。";
+}
+
+async function loadAiDiagnosis(submissionId, target, button) {
+    if (!target) {
+        return;
+    }
+    const originalText = button?.textContent;
+    if (button) {
+        button.disabled = true;
+        button.textContent = "分析中...";
+    }
+    target.className = "detail-panel";
+    target.innerHTML = `<div class="detail-block"><strong>AI 辅助分析</strong><p class="detail-copy">正在生成分析结果，请稍候。</p></div>`;
+    try {
+        const diagnosis = await api(`/api/submissions/${submissionId}/ai-diagnosis`, { method: "POST" });
+        renderAiDiagnosis(target, diagnosis);
+        showToast("AI 辅助分析已生成。", "success", "分析完成");
+    } catch (error) {
+        target.className = "detail-panel empty-state";
+        target.textContent = error.message || "AI 分析暂时不可用，请稍后重试。";
+        showToast(error.message || "AI 分析暂时不可用，请稍后重试。", "error", "分析失败");
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText || "AI 辅助分析";
+        }
+    }
+}
+
+function renderAiDiagnosis(target, diagnosis) {
+    const possibleCauses = renderAiList(diagnosis.possibleCauses, "暂无明确原因分析。");
+    const fixSuggestions = renderAiList(diagnosis.fixSuggestions, "暂无修改建议。");
+    const knowledgePoints = renderAiList(diagnosis.knowledgePoints, "暂无相关知识点提示。");
+
+    target.className = "detail-panel";
+    target.innerHTML = `
+        <article class="detail-block">
+            <div class="inline-header">
+                <h4>AI 辅助分析</h4>
+                <span class="pill ${statusClass(diagnosis.status)}">${translateStatus(diagnosis.status)}</span>
+            </div>
+            <p class="detail-copy">${escapeHtml(diagnosis.summary || "暂无分析摘要。")}</p>
+        </article>
+        <article class="detail-block">
+            <strong>可能原因</strong>
+            ${possibleCauses}
+        </article>
+        <article class="detail-block">
+            <strong>修改建议</strong>
+            ${fixSuggestions}
+        </article>
+        <article class="detail-block">
+            <strong>相关知识点</strong>
+            ${knowledgePoints}
+        </article>
+        <article class="detail-block">
+            <strong>说明</strong>
+            <p class="detail-copy">${escapeHtml(diagnosis.disclaimer || "AI 分析仅供参考。")}</p>
+        </article>
+    `;
+}
+
+function renderAiList(items, emptyText) {
+    if (!items || !items.length) {
+        return `<p class="detail-copy">${escapeHtml(emptyText)}</p>`;
+    }
+    return `
+        <ul class="detail-list">
+            ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
     `;
 }
 
@@ -1955,17 +2157,96 @@ function switchAuthTab(tab) {
     el.registerTabButton.classList.toggle("active", !isLogin);
     el.loginForm.classList.toggle("hidden", !isLogin);
     el.registerForm.classList.toggle("hidden", isLogin);
-    el.authTitle.textContent = isLogin ? "登录平台" : "注册账号";
-    el.authSubtitle.textContent = isLogin ? "登录后进入对应工作台。" : "注册完成后自动登录。";
-    setMessage(el.authMessage, isLogin ? "可直接使用演示账号登录。" : "注册后会自动登录。");
+    el.authTitle.textContent = isLogin ? "欢迎回来" : "创建账号";
+    el.authSubtitle.textContent = isLogin ? "登录后进入对应工作台" : "注册完成后自动登录";
+    setMessage(el.authMessage, isLogin ? "点击下方演示账号可快速填入。" : "注册后会自动登录。");
 }
 
 function useDemoAccount(role) {
     const demo = DEMO_ACCOUNTS[role];
-    navigate(ROUTES.login);
+    const roleLabel = role === "admin" ? "管理员" : role === "teacher" ? "教师" : "学生";
+    // 确保当前在登录 tab
+    if (el.loginForm?.classList.contains("hidden")) {
+        switchAuthTab("login");
+    }
     el.loginUsernameInput.value = demo.username;
     el.loginPasswordInput.value = demo.password;
-    notify(el.authMessage, `已填入${role === "teacher" ? "教师" : "学生"}示例账号。`, "success", "快捷填充");
+    notify(el.authMessage, `已填入${roleLabel}演示账号，点击登录即可进入。`, "success", "快捷填充");
+}
+
+function showResetPasswordDialog() {
+    return new Promise((resolve) => {
+        if (!el.resetPasswordDialog || !el.resetPasswordInput) {
+            resolve(null);
+            return;
+        }
+        const form = el.resetPasswordDialog.querySelector("form");
+        let settled = false;
+        const settle = (value) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            form?.removeEventListener("submit", onSubmit);
+            el.resetPasswordCancelButton?.removeEventListener("click", onCancel);
+            el.resetPasswordDialog.removeEventListener("close", onClose);
+            if (el.resetPasswordDialog.open) {
+                el.resetPasswordDialog.close();
+            }
+            resolve(value);
+        };
+        const onSubmit = (event) => {
+            event.preventDefault();
+            settle(el.resetPasswordInput.value);
+        };
+        const onCancel = () => settle(null);
+        const onClose = () => settle(null);
+
+        el.resetPasswordInput.value = "";
+        form?.addEventListener("submit", onSubmit);
+        el.resetPasswordCancelButton?.addEventListener("click", onCancel);
+        el.resetPasswordDialog.addEventListener("close", onClose);
+        el.resetPasswordDialog.showModal();
+        el.resetPasswordInput.focus();
+    });
+}
+
+function showConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+        if (!el.confirmDialog) {
+            resolve(false);
+            return;
+        }
+        let settled = false;
+        const settle = (value) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            el.confirmDialogOkButton?.removeEventListener("click", onOk);
+            el.confirmDialogCancelButton?.removeEventListener("click", onCancel);
+            el.confirmDialog.removeEventListener("close", onClose);
+            if (el.confirmDialog.open) {
+                el.confirmDialog.close();
+            }
+            resolve(value);
+        };
+        const onOk = () => settle(true);
+        const onCancel = () => settle(false);
+        const onClose = () => settle(false);
+
+        if (el.confirmDialogTitle) {
+            el.confirmDialogTitle.textContent = title || "确认操作";
+        }
+        if (el.confirmDialogMessage) {
+            el.confirmDialogMessage.textContent = message || "";
+        }
+        el.confirmDialogOkButton?.addEventListener("click", onOk);
+        el.confirmDialogCancelButton?.addEventListener("click", onCancel);
+        el.confirmDialog.addEventListener("close", onClose);
+        el.confirmDialog.showModal();
+        el.confirmDialogOkButton?.focus();
+    });
 }
 
 function acceptAuth(auth) {
@@ -2047,6 +2328,10 @@ function resetWorkspace() {
     if (el.submissionDetail) {
         el.submissionDetail.className = "detail-panel empty-state";
         el.submissionDetail.textContent = "选择一条提交记录后，这里会显示编译结果、运行信息和每个测试用例的通过情况。";
+    }
+    if (el.studentAiDiagnosisPanel) {
+        el.studentAiDiagnosisPanel.className = "detail-panel empty-state";
+        el.studentAiDiagnosisPanel.textContent = "发起 AI 辅助分析后，这里会显示问题概述、修改建议和知识点提示。";
     }
 }
 
@@ -2196,7 +2481,9 @@ function focusSubmissionEditor() {
 
 function startSubmissionPolling(submissionId, teacherMode) {
     stopSubmissionPolling();
+    state.submissionPollAttempts = 0;
     state.submissionPollTimer = window.setInterval(async () => {
+        state.submissionPollAttempts += 1;
         try {
             const submission = await api(`/api/submissions/${submissionId}`);
             renderSubmissionDetail(teacherMode ? el.teacherSubmissionDetail : el.submissionDetail, submission);
@@ -2211,6 +2498,11 @@ function startSubmissionPolling(submissionId, teacherMode) {
                     await loadStudentDashboard("评测已完成，结果已刷新。", true);
                 }
                 showToast("后台评测已完成。", "success", "评测完成");
+                return;
+            }
+            if (state.submissionPollAttempts >= 40) {
+                stopSubmissionPolling();
+                showToast("评测超时，请手动刷新查看结果。", "error", "评测超时");
             }
         } catch (error) {
             stopSubmissionPolling();
@@ -2223,6 +2515,7 @@ function stopSubmissionPolling() {
         window.clearInterval(state.submissionPollTimer);
         state.submissionPollTimer = null;
     }
+    state.submissionPollAttempts = 0;
 }
 
 function normalizeDateTime(value) {
@@ -2279,6 +2572,10 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+}
+
+function escapeMultilineText(value) {
+    return escapeHtml(value).replaceAll("\n", "<br>");
 }
 
 async function downloadAssignmentGrades(assignmentId) {

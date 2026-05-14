@@ -5,6 +5,8 @@ import com.graduation.autograding.auth.AuthenticatedUser;
 import com.graduation.autograding.dto.SubmissionCreateRequest;
 import com.graduation.autograding.dto.SubmissionResponse;
 import com.graduation.autograding.dto.SubmissionSummaryResponse;
+import com.graduation.autograding.dto.AiDiagnosisResponse;
+import com.graduation.autograding.service.AiDiagnosisService;
 import com.graduation.autograding.service.SubmissionService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -21,9 +23,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class SubmissionController {
 
     private final SubmissionService submissionService;
+    private final AiDiagnosisService aiDiagnosisService;
 
-    public SubmissionController(SubmissionService submissionService) {
+    public SubmissionController(SubmissionService submissionService,
+                                AiDiagnosisService aiDiagnosisService) {
         this.submissionService = submissionService;
+        this.aiDiagnosisService = aiDiagnosisService;
     }
 
     @PostMapping
@@ -45,6 +50,13 @@ public class SubmissionController {
             @RequestAttribute(AuthInterceptor.CURRENT_USER_ATTRIBUTE) AuthenticatedUser currentUser,
             @PathVariable Long submissionId) {
         return SubmissionResponse.fromEntity(submissionService.rejudgeSubmission(currentUser, submissionId));
+    }
+
+    @PostMapping("/{submissionId}/ai-diagnosis")
+    public AiDiagnosisResponse diagnoseSubmission(
+            @RequestAttribute(AuthInterceptor.CURRENT_USER_ATTRIBUTE) AuthenticatedUser currentUser,
+            @PathVariable Long submissionId) {
+        return aiDiagnosisService.diagnoseSubmission(currentUser, submissionId);
     }
 
     @GetMapping("/student/{studentId}")

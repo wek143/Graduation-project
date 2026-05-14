@@ -1,5 +1,7 @@
 package com.graduation.autograding.admin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -11,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.graduation.autograding.repository.AiSettingsRepository;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
@@ -32,6 +35,9 @@ class AdminManagementIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AiSettingsRepository aiSettingsRepository;
 
     @Test
     void adminCanSearchAssignmentsAndUsers() throws Exception {
@@ -82,6 +88,51 @@ class AdminManagementIntegrationTest {
                         .header(AUTHORIZATION, bearer(teacherToken)))
                 .andExpect(status().isForbidden())
                 .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON));
+
+        mockMvc.perform(get("/api/admin/ai-settings")
+                        .header(AUTHORIZATION, bearer(teacherToken)))
+                .andExpect(status().isForbidden())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON));
+    }
+
+    @Test
+    void adminCanReadAndUpdateAiSettings() throws Exception {
+        String adminToken = login("admin1", "123456");
+
+        mockMvc.perform(get("/api/admin/ai-settings")
+                        .header(AUTHORIZATION, bearer(adminToken)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(jsonPath("$.enabled").exists())
+                .andExpect(jsonPath("$.baseUrl").exists())
+                .andExpect(jsonPath("$.model").exists())
+                .andExpect(jsonPath("$.timeoutSeconds").exists())
+                .andExpect(jsonPath("$.apiKeyConfigured").exists());
+
+        mockMvc.perform(post("/api/admin/ai-settings")
+                        .header(AUTHORIZATION, bearer(adminToken))
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "enabled", true,
+                                "baseUrl", "https://api.deepseek.com",
+                                "model", "deepseek-chat",
+                                "timeoutSeconds", 25,
+                                "apiKey", "sk-demo-admin-config"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(APPLICATION_JSON))
+                .andExpect(jsonPath("$.enabled").value(true))
+                .andExpect(jsonPath("$.baseUrl").value("https://api.deepseek.com"))
+                .andExpect(jsonPath("$.model").value("deepseek-chat"))
+                .andExpect(jsonPath("$.timeoutSeconds").value(25))
+                .andExpect(jsonPath("$.apiKeyConfigured").value(true));
+
+        var savedSettings = aiSettingsRepository.findById(1L).orElseThrow();
+        assertTrue(savedSettings.isEnabled());
+        assertEquals("https://api.deepseek.com", savedSettings.getBaseUrl());
+        assertEquals("deepseek-chat", savedSettings.getModel());
+        assertEquals(25, savedSettings.getTimeoutSeconds());
+        assertEquals("sk-demo-admin-config", savedSettings.getApiKey());
     }
 
     private String login(String username, String password) throws Exception {
