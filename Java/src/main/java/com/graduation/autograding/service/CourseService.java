@@ -8,6 +8,8 @@ import com.graduation.autograding.domain.Course;
 import com.graduation.autograding.domain.CourseEnrollment;
 import com.graduation.autograding.domain.User;
 import com.graduation.autograding.domain.UserRole;
+import com.graduation.autograding.dto.AdminCourseCreateRequest;
+import com.graduation.autograding.dto.AdminCourseUpdateRequest;
 import com.graduation.autograding.dto.CourseCreateRequest;
 import com.graduation.autograding.dto.CourseStatisticsResponse;
 import com.graduation.autograding.dto.CourseUpdateRequest;
@@ -235,8 +237,8 @@ public class CourseService {
         ensureTeacher(currentUser);
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("课程不存在。"));
-        if (!currentUser.isAdmin() && !course.getTeacher().getId().equals(currentUser.id())) {
-            throw new ForbiddenException("你只能管理自己创建的课程。");
+        if (!currentUser.isAdmin() && (course.getTeacher() == null || !course.getTeacher().getId().equals(currentUser.id()))) {
+            throw new ForbiddenException("你只能管理自己负责的课程。");
         }
         return course;
     }
@@ -300,6 +302,116 @@ public class CourseService {
                 totalSubmissions,
                 averageScore
         );
+    }
+
+    @Transactional
+    public Course createCourseByAdmin(AuthenticatedUser currentUser, AdminCourseCreateRequest request) {
+        ServiceHelper.ensureAdmin(currentUser);
+        Course course = new Course(
+                normalize(request.name()),
+                normalize(request.term()),
+                normalize(request.className())
+        );
+        if (request.code() != null && !request.code().isBlank()) {
+            course.setCode(normalize(request.code()));
+        }
+        Course saved = courseRepository.save(course);
+        auditLogService.record(currentUser, "COURSE_CREATED", "COURSE", String.valueOf(saved.getId()),
+                "管理员创建课程班级：" + saved.getDisplayName());
+        return saved;
+    }
+
+    @Transactional
+    public Course updateCourseByAdmin(AuthenticatedUser currentUser, Long courseId, AdminCourseUpdateRequest request) {
+        ServiceHelper.ensureAdmin(currentUser);
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("课程不存在。"));
+        course.setName(normalize(request.name()));
+        course.setTerm(normalize(request.term()));
+        course.setClassName(normalize(request.className()));
+        course.setCode(request.code() != null && !request.code().isBlank() ? normalize(request.code()) : null);
+        if (request.active() != null) {
+            course.setActive(request.active());
+        }
+        Course saved = courseRepository.save(course);
+        auditLogService.record(currentUser, "COURSE_UPDATED", "COURSE", String.valueOf(saved.getId()),
+                "管理员更新课程班级：" + saved.getDisplayName());
+        return saved;
+    }
+
+    @Transactional
+    public void deleteCourseByAdmin(AuthenticatedUser currentUser, Long courseId) {
+        ServiceHelper.ensureAdmin(currentUser);
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("课程不存在。"));
+        if (assignmentRepository.countByCourseId(courseId) > 0) {
+            throw new IllegalStateException("当前课程下已有作业，不能直接删除。");
+        }
+        String displayName = course.getDisplayName();
+        courseEnrollmentRepository.deleteByCourseId(courseId);
+        courseRepository.delete(course);
+        auditLogService.record(currentUser, "COURSE_DELETED", "COURSE", String.valueOf(courseId),
+                "管理员删除课程班级：" + displayName);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Course> listAvailableCourses(String term) {
+        if (term != null && !term.isBlank()) {
+            return courseRepository.findAllByTermOrderByNameAsc(term.trim());
+        }
+        return courseRepository.findAllOrderByTermDescNameAsc();
+    }
+
+    @Transactional
+    public void joinCourse(AuthenticatedUser currentUser, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("课程不存在。"));
+        if (currentUser.isTeacher()) {
+            if (course.getTeacher() != null) {
+                throw new IllegalStateException("该课程班级已有任课教师，无法加入。");
+            }
+            User teacher = userRepository.findById(currentUser.id())
+                    .orElseThrow(() -> new NotFoundException("用户不存在。"));
+            course.setTeacher(teacher);
+            courseRepository.save(course);
+            auditLogService.record(currentUser, "COURSE_TEACHER_JOINED", "COURSE", String.valueOf(courseId),
+                    "教师加入课程班级：" + course.getDisplayName());
+        } else if (currentUser.isStudent()) {
+            if (courseEnrollmentRepository.existsByCourseIdAndStudentId(courseId, currentUser.id())) {
+                return;
+            }
+            User student = userRepository.findById(currentUser.id())
+                    .orElseThrow(() -> new NotFoundException("用户不存在。"));
+            courseEnrollmentRepository.save(new CourseEnrollment(course, student));
+            auditLogService.record(currentUser, "COURSE_ENROLLMENT_CREATED", "COURSE", String.valueOf(courseId),
+                    "学生加入课程班级：" + course.getDisplayName());
+        } else {
+            throw new ForbiddenException("管理员无需加入课程班级。");
+        }
+    }
+
+    @Transactional
+    public void leaveCourse(AuthenticatedUser currentUser, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("课程不存在。"));
+        if (currentUser.isTeacher()) {
+            if (course.getTeacher() == null || !course.getTeacher().getId().equals(currentUser.id())) {
+                throw new ForbiddenException("你不是该课程班级的任课教师。");
+            }
+            course.setTeacher(null);
+            courseRepository.save(course);
+            auditLogService.record(currentUser, "COURSE_TEACHER_LEFT", "COURSE", String.valueOf(courseId),
+                    "教师退出课程班级：" + course.getDisplayName());
+        } else if (currentUser.isStudent()) {
+            CourseEnrollment enrollment = courseEnrollmentRepository
+                    .findByCourseIdAndStudentId(courseId, currentUser.id())
+                    .orElseThrow(() -> new NotFoundException("未找到该选课记录。"));
+            courseEnrollmentRepository.delete(enrollment);
+            auditLogService.record(currentUser, "COURSE_ENROLLMENT_DELETED", "COURSE", String.valueOf(courseId),
+                    "学生退出课程班级：" + course.getDisplayName());
+        } else {
+            throw new ForbiddenException("管理员无需退出课程班级。");
+        }
     }
 
     private void ensureTeacher(AuthenticatedUser currentUser) {

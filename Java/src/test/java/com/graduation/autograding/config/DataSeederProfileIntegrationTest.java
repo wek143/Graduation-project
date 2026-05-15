@@ -14,6 +14,7 @@ import org.springframework.test.annotation.DirtiesContext;
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false",
         "app.startup.open-browser=false"
 })
 @DirtiesContext

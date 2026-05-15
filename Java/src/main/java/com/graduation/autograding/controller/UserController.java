@@ -2,6 +2,7 @@ package com.graduation.autograding.controller;
 
 import com.graduation.autograding.auth.AuthInterceptor;
 import com.graduation.autograding.auth.AuthenticatedUser;
+import com.graduation.autograding.dto.UpdateProfileRequest;
 import com.graduation.autograding.dto.UserPasswordResetRequest;
 import com.graduation.autograding.dto.UserStatusUpdateRequest;
 import com.graduation.autograding.dto.SystemOverviewResponse;
@@ -49,6 +50,19 @@ public class UserController {
     public SystemOverviewResponse getOverview(
             @RequestAttribute(AuthInterceptor.CURRENT_USER_ATTRIBUTE) AuthenticatedUser currentUser) {
         return userService.getSystemOverview(currentUser);
+    }
+
+    @GetMapping("/me")
+    public UserResponse getMyProfile(
+            @RequestAttribute(AuthInterceptor.CURRENT_USER_ATTRIBUTE) AuthenticatedUser currentUser) {
+        return UserResponse.fromEntity(userService.getMyProfile(currentUser));
+    }
+
+    @PutMapping("/me")
+    public UserResponse updateMyProfile(
+            @RequestAttribute(AuthInterceptor.CURRENT_USER_ATTRIBUTE) AuthenticatedUser currentUser,
+            @RequestBody UpdateProfileRequest request) {
+        return UserResponse.fromEntity(userService.updateMyProfile(currentUser, request));
     }
 
     @PutMapping("/{userId}/status")

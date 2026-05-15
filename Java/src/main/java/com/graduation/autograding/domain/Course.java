@@ -23,7 +23,7 @@ public class Course {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
+    @Column(nullable = true, length = 50)
     private String code;
 
     @Column(nullable = false, length = 100)
@@ -38,7 +38,7 @@ public class Course {
     @Column(nullable = false)
     private boolean active = true;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "teacher_id")
     private User teacher;
 
@@ -55,6 +55,12 @@ public class Course {
         this.term = term;
         this.className = className;
         this.teacher = teacher;
+    }
+
+    public Course(String name, String term, String className) {
+        this.name = name;
+        this.term = term;
+        this.className = className;
     }
 
     public Long getId() {
@@ -74,7 +80,7 @@ public class Course {
     }
 
     public String getDisplayName() {
-        return code + " · " + name;
+        return code != null ? code + " · " + name : name;
     }
 
     public void setName(String name) {

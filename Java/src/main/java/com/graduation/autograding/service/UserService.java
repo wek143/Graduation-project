@@ -10,6 +10,8 @@ import com.graduation.autograding.domain.UserRole;
 import com.graduation.autograding.dto.AuthRequest;
 import com.graduation.autograding.dto.RegisterRequest;
 import com.graduation.autograding.dto.SystemOverviewResponse;
+import com.graduation.autograding.dto.UpdateProfileRequest;
+import com.graduation.autograding.exception.ForbiddenException;
 import com.graduation.autograding.exception.NotFoundException;
 import com.graduation.autograding.repository.AssignmentRepository;
 import com.graduation.autograding.repository.SubmissionRepository;
@@ -146,6 +148,38 @@ public class UserService {
         auditLogService.record(currentUser, "USER_PASSWORD_RESET", "USER", String.valueOf(userId),
                 "重置密码：" + savedUser.getUsername());
         return savedUser;
+    }
+
+    @Transactional(readOnly = true)
+    public User getMyProfile(AuthenticatedUser currentUser) {
+        return userRepository.findById(currentUser.id())
+                .orElseThrow(() -> new NotFoundException("用户不存在。"));
+    }
+
+    @Transactional
+    public User updateMyProfile(AuthenticatedUser currentUser, UpdateProfileRequest request) {
+        User user = userRepository.findById(currentUser.id())
+                .orElseThrow(() -> new NotFoundException("用户不存在。"));
+        if (request.newPassword() != null && !request.newPassword().isBlank()) {
+            if (request.oldPassword() == null || request.oldPassword().isBlank()) {
+                throw new IllegalArgumentException("修改密码时必须提供旧密码。");
+            }
+            if (!passwordService.matches(request.oldPassword(), user.getPassword())) {
+                throw new ForbiddenException("旧密码不正确。");
+            }
+            user.setPassword(passwordService.encode(request.newPassword()));
+            authTokenService.invalidateAllForUser(user.getId());
+        }
+        if (request.fullName() != null) {
+            user.setFullName(normalizeNullable(request.fullName()));
+        }
+        if (request.className() != null) {
+            user.setClassName(normalizeNullable(request.className()));
+        }
+        User saved = userRepository.save(user);
+        auditLogService.record(currentUser, "USER_PROFILE_UPDATED", "USER", String.valueOf(saved.getId()),
+                "用户更新个人信息：" + saved.getUsername());
+        return saved;
     }
 
     private UserRole parseRole(String role) {

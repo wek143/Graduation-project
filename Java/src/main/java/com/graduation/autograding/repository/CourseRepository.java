@@ -28,26 +28,33 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     Optional<Course> findByCode(String code);
 
     @EntityGraph(attributePaths = {"teacher"})
+    List<Course> findAllByTermOrderByNameAsc(String term);
+
+    @EntityGraph(attributePaths = {"teacher"})
+    @Query("select c from Course c order by c.term desc, c.name asc")
+    List<Course> findAllOrderByTermDescNameAsc();
+
+    @EntityGraph(attributePaths = {"teacher"})
     @Query(value = """
             select c from Course c
-            join c.teacher t
+            left join c.teacher t
             where :keyword is null
                or lower(c.code) like lower(concat('%', :keyword, '%'))
                or lower(c.name) like lower(concat('%', :keyword, '%'))
                or lower(c.term) like lower(concat('%', :keyword, '%'))
                or lower(c.className) like lower(concat('%', :keyword, '%'))
-               or lower(t.username) like lower(concat('%', :keyword, '%'))
+               or lower(coalesce(t.username, '')) like lower(concat('%', :keyword, '%'))
                or lower(coalesce(t.fullName, '')) like lower(concat('%', :keyword, '%'))
             """,
             countQuery = """
                     select count(c) from Course c
-                    join c.teacher t
+                    left join c.teacher t
                     where :keyword is null
                        or lower(c.code) like lower(concat('%', :keyword, '%'))
                        or lower(c.name) like lower(concat('%', :keyword, '%'))
                        or lower(c.term) like lower(concat('%', :keyword, '%'))
                        or lower(c.className) like lower(concat('%', :keyword, '%'))
-                       or lower(t.username) like lower(concat('%', :keyword, '%'))
+                       or lower(coalesce(t.username, '')) like lower(concat('%', :keyword, '%'))
                        or lower(coalesce(t.fullName, '')) like lower(concat('%', :keyword, '%'))
                     """)
     Page<Course> searchForAdmin(@Param("keyword") String keyword, Pageable pageable);

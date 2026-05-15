@@ -58,13 +58,12 @@ public class DataSeeder {
                             "软件工程01班"
                     )));
             Course course = courseRepository.findByCode("CS101")
-                    .orElseGet(() -> courseRepository.save(new Course(
-                            "CS101",
-                            "程序设计基础",
-                            "2026 春",
-                            "软件工程01班",
-                            teacher
-                    )));
+                    .orElseGet(() -> {
+                        Course c = new Course("程序设计基础-1班", "2025~2026第二学期", "软件工程01班");
+                        c.setCode("CS101");
+                        c.setTeacher(teacher);
+                        return courseRepository.save(c);
+                    });
             if (!courseEnrollmentRepository.existsByCourseIdAndStudentId(course.getId(), student.getId())) {
                 courseEnrollmentRepository.save(new CourseEnrollment(course, student));
             }

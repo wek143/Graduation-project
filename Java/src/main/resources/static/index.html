@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>XX大学编码作业自动批改平台</title>
+    <meta name="description" content="面向高校的编程作业在线提交与自动评测平台，支持教师发布作业、学生提交代码、系统自动判题。">
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%232563eb'/><text y='.9em' font-size='62' x='50%' text-anchor='middle' font-family='sans-serif' font-weight='900' fill='white'>AG</text></svg>">
     <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
@@ -18,20 +20,23 @@
             <span class="brand-mark">AG</span>
             <span class="brand-copy">
                 <strong>XX大学编码作业自动批改平台</strong>
-                <small>Code Assignment Auto Grading Platform</small>
             </span>
         </a>
 
         <div id="publicNav" class="topbar-actions topbar-actions-public">
-            <button id="launchNavButton" class="btn btn-ghost">产品首页</button>
             <button id="navLoginButton" class="btn btn-ghost">登录</button>
             <button id="navRegisterButton" class="btn btn-primary">进入系统</button>
         </div>
 
         <div id="privateNav" class="topbar-actions hidden">
+            <div class="topbar-center"></div>
             <div class="session-pill">
+                <div class="session-pill-avatar">
+                    <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
                 <span id="currentUsername">未登录</span>
-                <small id="currentRoleLabel">请先登录系统</small>
+                <small id="currentRoleLabel">请先登录</small>
+                <span class="session-pill-arrow">▾</span>
             </div>
             <button id="refreshDashboardButton" class="btn btn-secondary">刷新数据</button>
             <button id="logoutButton" class="btn btn-ghost">退出登录</button>
@@ -39,246 +44,160 @@
     </header>
 
     <main class="view-stack">
-        <section id="launchView" class="view-section">
-            <section class="launch-stage">
-                <div class="launch-command panel-obsidian">
-                    <div class="hero-copy">
-                        <div class="hero-badges">
-                            <span class="eyebrow">Campus Coding Platform</span>
-                            <span class="status-ribbon">Teacher / Student / Auto Judge</span>
-                        </div>
-                        <h1>XX大学编码作业自动批改平台</h1>
-                        <p class="hero-text">统一完成作业发布、代码提交与自动评测。</p>
-                        <div class="hero-actions">
-                            <button id="launchLoginButton" class="btn btn-primary">登录工作台</button>
-                            <button id="launchRegisterButton" class="btn btn-ghost btn-ghost-inverse">新建账号</button>
-                        </div>
-                    </div>
-
-                    <div class="hero-preview">
-                        <div class="preview-window">
-                            <div class="preview-toolbar">
-                                <span>平台模块</span>
-                                <small>实时工作台</small>
-                            </div>
-                            <div class="preview-grid">
-                                <article class="preview-module">
-                                    <span>教师端</span>
-                                    <strong>作业发布</strong>
-                                </article>
-                                <article class="preview-module">
-                                    <span>学生端</span>
-                                    <strong>代码提交</strong>
-                                </article>
-                                <article class="preview-module">
-                                    <span>系统端</span>
-                                    <strong>自动批改</strong>
-                                </article>
-                            </div>
-                            <div class="preview-board">
-                                <article class="preview-row">
-                                    <div>
-                                        <strong>作业创建与用例配置</strong>
-                                    </div>
-                                    <span class="preview-pill preview-pill-good">教师端</span>
-                                </article>
-                                <article class="preview-row">
-                                    <div>
-                                        <strong>作业选择与在线提交</strong>
-                                    </div>
-                                    <span class="preview-pill">学生端</span>
-                                </article>
-                                <article class="preview-row">
-                                    <div>
-                                        <strong>结果反馈与详情查看</strong>
-                                    </div>
-                                    <span class="preview-pill preview-pill-soft">自动评测</span>
-                                </article>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="launch-columns">
-                    <aside class="panel panel-paper access-panel">
-                        <div class="panel-heading">
-                            <span class="panel-kicker">Quick Entry</span>
-                            <h2>快速进入系统</h2>
-                        </div>
-
-                        <div class="demo-list">
-                            <article class="demo-card">
-                                <div>
-                                    <strong>管理员账号</strong>
-                                    <p>admin1 / 123456</p>
-                                </div>
-                                <button class="btn btn-ghost use-demo-button" data-demo-role="admin">填入管理员账号</button>
-                            </article>
-                            <article class="demo-card">
-                                <div>
-                                    <strong>教师账号</strong>
-                                    <p>teacher1 / 123456</p>
-                                </div>
-                                <button class="btn btn-ghost use-demo-button" data-demo-role="teacher">填入教师账号</button>
-                            </article>
-                            <article class="demo-card">
-                                <div>
-                                    <strong>学生账号</strong>
-                                    <p>student1 / 123456</p>
-                                </div>
-                                <button class="btn btn-ghost use-demo-button" data-demo-role="student">填入学生账号</button>
-                            </article>
-                        </div>
-
-                        <div class="access-note">
-                            <strong>当前入口</strong>
-                            <p>`/#/login`</p>
-                        </div>
-                    </aside>
-
-                    <section class="panel panel-paper capability-panel">
-                        <div class="panel-heading">
-                            <span class="panel-kicker">Platform</span>
-                            <h2>核心能力</h2>
-                        </div>
-
-                        <div class="capability-grid">
-                            <article class="capability-card">
-                                <span>01</span>
-                                <div>
-                                    <h3>教师发布作业</h3>
-                                    <p>题目、用例、截止时间统一配置。</p>
-                                </div>
-                            </article>
-                            <article class="capability-card">
-                                <span>02</span>
-                                <div>
-                                    <h3>学生在线提交</h3>
-                                    <p>选择作业后直接提交 Java 代码。</p>
-                                </div>
-                            </article>
-                            <article class="capability-card">
-                                <span>03</span>
-                                <div>
-                                    <h3>自动批改反馈</h3>
-                                    <p>即时返回编译、运行和得分结果。</p>
-                                </div>
-                            </article>
-                        </div>
-                    </section>
-                </div>
-            </section>
-        </section>
-
         <section id="authView" class="view-section hidden">
-            <div class="auth-stage">
-                <section class="auth-side panel-obsidian">
-                    <div class="panel-heading">
-                        <span class="eyebrow">Secure Entry</span>
-                        <h2 id="authTitle">登录系统</h2>
-                        <p id="authSubtitle" class="auth-copy">登录后进入对应工作台。</p>
+            <div class="auth-layout">
+                <!-- 左侧插图区 -->
+                <div class="auth-illus-panel">
+                    <div class="auth-illus-content">
+                        <h1 class="auth-illus-title">作业自动评测与管理系统</h1>
+                        <p class="auth-illus-sub">高效评测 · 智能管理 · 助力教学</p>
+                        <div class="auth-illus-scene">
+                            <svg viewBox="0 0 420 300" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <!-- desk -->
+                                <rect x="30" y="240" width="360" height="14" rx="4" fill="#b8d4f8"/>
+                                <!-- laptop base -->
+                                <rect x="110" y="200" width="200" height="44" rx="6" fill="#4a90d9"/>
+                                <!-- laptop screen -->
+                                <rect x="118" y="110" width="184" height="96" rx="6" fill="#1e3a6e"/>
+                                <rect x="124" y="116" width="172" height="84" rx="4" fill="#0f2447"/>
+                                <!-- screen content lines -->
+                                <rect x="132" y="124" width="80" height="6" rx="3" fill="#3b82f6" opacity=".8"/>
+                                <rect x="132" y="136" width="120" height="4" rx="2" fill="#60a5fa" opacity=".5"/>
+                                <rect x="132" y="146" width="100" height="4" rx="2" fill="#60a5fa" opacity=".4"/>
+                                <rect x="132" y="156" width="60" height="4" rx="2" fill="#34d399" opacity=".6"/>
+                                <rect x="132" y="166" width="90" height="4" rx="2" fill="#60a5fa" opacity=".3"/>
+                                <rect x="132" y="176" width="50" height="4" rx="2" fill="#f59e0b" opacity=".5"/>
+                                <!-- score badge on screen -->
+                                <rect x="248" y="124" width="40" height="20" rx="4" fill="#22c55e" opacity=".9"/>
+                                <text x="268" y="138" text-anchor="middle" font-size="10" font-weight="700" fill="#fff">100</text>
+                                <!-- hinge -->
+                                <rect x="190" y="204" width="40" height="4" rx="2" fill="#3a7bc8"/>
+                                <!-- book stack left -->
+                                <rect x="50" y="210" width="52" height="10" rx="3" fill="#f59e0b"/>
+                                <rect x="54" y="200" width="44" height="12" rx="3" fill="#fbbf24"/>
+                                <rect x="58" y="190" width="36" height="12" rx="3" fill="#fcd34d"/>
+                                <!-- book stack right -->
+                                <rect x="318" y="215" width="52" height="8" rx="3" fill="#a78bfa"/>
+                                <rect x="322" y="205" width="44" height="12" rx="3" fill="#c4b5fd"/>
+                                <!-- plant pot -->
+                                <rect x="356" y="220" width="28" height="22" rx="4" fill="#d97706"/>
+                                <ellipse cx="370" cy="220" rx="16" ry="6" fill="#b45309"/>
+                                <path d="M370 218 Q358 200 352 185" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+                                <ellipse cx="349" cy="182" rx="10" ry="7" fill="#4ade80" transform="rotate(-20 349 182)"/>
+                                <path d="M370 215 Q382 198 388 183" stroke="#22c55e" stroke-width="3" stroke-linecap="round"/>
+                                <ellipse cx="391" cy="180" rx="10" ry="7" fill="#4ade80" transform="rotate(20 391 180)"/>
+                                <!-- clock -->
+                                <circle cx="68" cy="165" r="22" fill="#fff" stroke="#b8d4f8" stroke-width="3"/>
+                                <circle cx="68" cy="165" r="2" fill="#1e3a6e"/>
+                                <line x1="68" y1="165" x2="68" y2="148" stroke="#1e3a6e" stroke-width="2" stroke-linecap="round"/>
+                                <line x1="68" y1="165" x2="80" y2="170" stroke="#3b82f6" stroke-width="2" stroke-linecap="round"/>
+                                <!-- floating paper 1 -->
+                                <rect x="310" y="140" width="50" height="60" rx="4" fill="#fff" stroke="#dbeafe" stroke-width="1.5" transform="rotate(8 310 140)"/>
+                                <rect x="316" y="150" width="30" height="3" rx="1.5" fill="#93c5fd" transform="rotate(8 316 150)"/>
+                                <rect x="316" y="158" width="24" height="3" rx="1.5" fill="#93c5fd" transform="rotate(8 316 158)"/>
+                                <rect x="316" y="166" width="28" height="3" rx="1.5" fill="#93c5fd" transform="rotate(8 316 166)"/>
+                                <!-- floating paper 2 -->
+                                <rect x="60" y="60" width="44" height="54" rx="4" fill="#fff" stroke="#dbeafe" stroke-width="1.5" transform="rotate(-6 60 60)"/>
+                                <rect x="66" y="70" width="26" height="3" rx="1.5" fill="#a5b4fc" transform="rotate(-6 66 70)"/>
+                                <rect x="66" y="78" width="20" height="3" rx="1.5" fill="#a5b4fc" transform="rotate(-6 66 78)"/>
+                                <rect x="66" y="86" width="24" height="3" rx="1.5" fill="#a5b4fc" transform="rotate(-6 66 86)"/>
+                                <!-- check mark badge -->
+                                <circle cx="340" cy="80" r="18" fill="#22c55e"/>
+                                <polyline points="331,80 338,87 350,72" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                        </div>
                     </div>
+                </div>
 
-                    <div class="auth-side-grid">
-                        <article class="auth-side-card">
-                            <strong>教师运营视角</strong>
-                            <p>发布作业与查看统计。</p>
-                        </article>
-                        <article class="auth-side-card">
-                            <strong>学生提交流程</strong>
-                            <p>提交代码与查看结果。</p>
-                        </article>
+                <!-- 右侧表单区 -->
+                <div class="auth-form-panel">
+                    <div class="auth-form-card">
+                        <div class="auth-logo-row">
+                            <span class="auth-cap-icon" aria-hidden="true">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                            </span>
+                            <span class="auth-logo-text">作业自动评测与管理系统</span>
+                        </div>
+
+                        <h3 id="authTitle" class="auth-form-title">欢迎回来</h3>
+                        <p id="authSubtitle" class="auth-form-subtitle">登录后进入对应工作台</p>
+
+                        <form id="loginForm" class="auth-form-body">
+                            <div class="auth-input-group">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input id="loginUsernameInput" type="text" name="username" placeholder="用户名" required>
+                            </div>
+                            <div class="auth-input-group">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <input id="loginPasswordInput" type="password" name="password" placeholder="密码" required>
+                                <button type="button" class="auth-eye-btn" id="loginPasswordToggle" aria-label="显示/隐藏密码">
+                                    <svg class="eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                                    <svg class="eye-closed hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                                </button>
+                            </div>
+                            <p class="auth-hint">支持管理员、教师、学生登录</p>
+                            <button type="submit" class="btn btn-primary btn-block btn-auth">登录</button>
+                            <button type="button" id="loginTabButton" class="btn btn-outline-primary btn-block btn-auth">注册账号</button>
+                        </form>
+
+                        <form id="registerForm" class="auth-form-body hidden">
+                            <div class="split-grid">
+                                <div class="auth-input-group">
+                                    <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                    <input type="text" name="fullName" placeholder="姓名">
+                                </div>
+                                <div class="auth-input-group">
+                                    <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+                                    <input type="text" name="className" placeholder="班级">
+                                </div>
+                            </div>
+                            <div class="auth-input-group">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <input type="text" name="username" placeholder="用户名" required>
+                            </div>
+                            <div class="auth-input-group">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                                <input type="password" name="password" placeholder="密码" required>
+                            </div>
+                            <div class="auth-input-group auth-input-group-select">
+                                <svg class="auth-input-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                                <select name="role">
+                                    <option value="STUDENT">学生</option>
+                                    <option value="TEACHER">教师</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block btn-auth">注册并自动登录</button>
+                            <button type="button" id="registerTabButton" class="btn btn-outline-primary btn-block btn-auth">返回登录</button>
+                        </form>
+
+                        <div id="authMessage" class="message-box auth-message-box" aria-live="polite"></div>
+
+                        <div class="auth-divider"><span>演示账号</span></div>
+                        <div class="auth-demo-row">
+                            <button class="btn btn-ghost btn-demo use-demo-button" data-demo-role="admin">管理员</button>
+                            <button class="btn btn-ghost btn-demo use-demo-button" data-demo-role="teacher">教师</button>
+                            <button class="btn btn-ghost btn-demo use-demo-button" data-demo-role="student">学生</button>
+                        </div>
                     </div>
-
-                    <div class="auth-side-metrics">
-                        <article>
-                            <span>Unified Entry</span>
-                            <strong>1</strong>
-                        </article>
-                        <article>
-                            <span>Core Roles</span>
-                            <strong>2</strong>
-                        </article>
-                        <article>
-                            <span>Judge Feedback</span>
-                            <strong>Real-time</strong>
-                        </article>
-                    </div>
-                </section>
-
-                <section class="auth-console panel-paper">
-                    <div class="panel-heading compact-heading">
-                        <span class="panel-kicker">Access Console</span>
-                        <h3>开始进入工作台</h3>
-                    </div>
-
-                    <div class="auth-switch">
-                        <button id="loginTabButton" class="tab-button active">登录</button>
-                        <button id="registerTabButton" class="tab-button">注册</button>
-                    </div>
-
-                    <form id="loginForm" class="form-stack">
-                        <label>
-                            <span>用户名</span>
-                            <input id="loginUsernameInput" type="text" name="username" placeholder="请输入用户名" required>
-                        </label>
-                        <label>
-                            <span>密码</span>
-                            <input id="loginPasswordInput" type="password" name="password" placeholder="请输入密码" required>
-                        </label>
-                        <button type="submit" class="btn btn-primary btn-block">登录并进入工作台</button>
-                    </form>
-
-                    <form id="registerForm" class="form-stack hidden">
-                        <label>
-                            <span>姓名</span>
-                            <input type="text" name="fullName" placeholder="例如：张三">
-                        </label>
-                        <label>
-                            <span>班级</span>
-                            <input type="text" name="className" placeholder="例如：软件工程01班">
-                        </label>
-                        <label>
-                            <span>用户名</span>
-                            <input type="text" name="username" placeholder="请输入新账号" required>
-                        </label>
-                        <label>
-                            <span>密码</span>
-                            <input type="password" name="password" placeholder="请输入密码" required>
-                        </label>
-                        <label>
-                            <span>角色</span>
-                            <select name="role">
-                                <option value="STUDENT">学生</option>
-                                <option value="TEACHER">教师</option>
-                            </select>
-                        </label>
-                        <button type="submit" class="btn btn-secondary btn-block">注册并自动登录</button>
-                    </form>
-
-                    <div id="authMessage" class="message-box" aria-live="polite"></div>
-                    <div class="auth-footer-note">启动后默认自动打开登录页。</div>
-                </section>
+                    <p class="auth-footer">© 2026 作业自动评测与管理系统</p>
+                </div>
             </div>
         </section>
 
         <section id="appView" class="view-section hidden">
-            <section class="workspace-marquee">
-                <div class="workspace-summary panel-obsidian">
+            <!-- JS refs kept but visually hidden -->
+            <div class="workspace-marquee" aria-hidden="true">
+                <div class="workspace-summary">
                     <h2 id="workspaceTitle">XX大学编码作业自动批改平台</h2>
                     <p id="workspaceDescription" class="muted">登录成功后显示当前角色的工作区。</p>
                     <div class="workspace-meta">
                         <span id="tokenExpiryLabel">令牌未生效</span>
                     </div>
                 </div>
-
-                <aside class="workspace-brief panel-paper">
-                    <div class="panel-heading compact-heading">
-                        <h3>实时系统反馈</h3>
-                    </div>
+                <aside class="workspace-brief">
                     <div id="dashboardMessage" class="message-box workspace-message" aria-live="polite"></div>
                 </aside>
-            </section>
+            </div>
 
             <section id="adminSection" class="role-section hidden">
                 <div class="portal-shell">
@@ -286,8 +205,9 @@
                         <div class="portal-sidebar-title">管理员功能</div>
                         <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="">首页</button>
                         <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-users">用户管理</button>
-                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-courses">课程总览</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-courses">课程班级管理</button>
                         <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-assignments">作业总览</button>
+                        <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-ai">AI 配置</button>
                         <button type="button" class="portal-nav-item" data-portal-role="admin" data-module-target="admin-audit">操作日志</button>
                     </aside>
 
@@ -315,7 +235,36 @@
                         <section class="portal-panel hidden" data-module-panel="admin-courses">
                             <div class="portal-panel-card">
                                 <div class="portal-panel-head">
-                                    <h3>课程总览</h3>
+                                    <h3>课程班级管理</h3>
+                                    <button id="adminCourseCreateBtn" class="btn btn-primary btn-small">+ 新建课程班级</button>
+                                </div>
+                                <div id="adminCourseCreateForm" class="admin-course-form hidden">
+                                    <form id="adminCourseForm" class="form-stack">
+                                        <div class="split-grid">
+                                            <label>
+                                                <span>课程班级名称</span>
+                                                <input type="text" name="name" placeholder="例如：Java程序设计-1班" required>
+                                            </label>
+                                            <label>
+                                                <span>课程代码（选填）</span>
+                                                <input type="text" name="code" placeholder="例如：CS101">
+                                            </label>
+                                        </div>
+                                        <div class="split-grid">
+                                            <label>
+                                                <span>学期</span>
+                                                <select name="term" id="adminCourseTerm" required></select>
+                                            </label>
+                                            <label>
+                                                <span>班级</span>
+                                                <input type="text" name="className" placeholder="例如：软件工程1班" required>
+                                            </label>
+                                        </div>
+                                        <div class="split-grid">
+                                            <button type="submit" id="adminCourseSubmitBtn" class="btn btn-primary">创建课程班级</button>
+                                            <button type="button" id="adminCourseCancelBtn" class="btn btn-ghost">取消</button>
+                                        </div>
+                                    </form>
                                 </div>
                                 <div id="adminCourseList" class="stack-list"></div>
                             </div>
@@ -327,6 +276,38 @@
                                     <h3>作业总览</h3>
                                 </div>
                                 <div id="adminAssignmentList" class="stack-list"></div>
+                            </div>
+                        </section>
+
+                        <section class="portal-panel hidden" data-module-panel="admin-ai">
+                            <div class="portal-panel-card">
+                                <div class="portal-panel-head">
+                                    <h3>AI 配置</h3>
+                                </div>
+                                <form id="adminAiSettingsForm" class="form-stack">
+                                    <label class="toggle-field">
+                                        <input id="adminAiEnabledInput" type="checkbox" name="enabled">
+                                        <span>启用 AI 辅助分析</span>
+                                    </label>
+                                    <label>
+                                        <span>Base URL</span>
+                                        <input id="adminAiBaseUrlInput" type="text" name="baseUrl" placeholder="https://api.deepseek.com">
+                                    </label>
+                                    <label>
+                                        <span>模型名称</span>
+                                        <input id="adminAiModelInput" type="text" name="model" placeholder="deepseek-chat">
+                                    </label>
+                                    <label>
+                                        <span>API Key</span>
+                                        <input id="adminAiApiKeyInput" type="password" name="apiKey" placeholder="留空则保持当前，填写新值则覆盖">
+                                    </label>
+                                    <label>
+                                        <span>超时秒数</span>
+                                        <input id="adminAiTimeoutInput" type="number" name="timeoutSeconds" min="1" value="20">
+                                    </label>
+                                    <button type="submit" class="btn btn-primary">保存 AI 配置</button>
+                                </form>
+                                <div id="adminAiSettingsStatus" class="message-box" aria-live="polite"></div>
                             </div>
                         </section>
 
@@ -343,86 +324,10 @@
             </section>
 
             <section id="teacherSection" class="role-section hidden">
-                <div class="section-heading">
-                    <div>
-                        <span class="section-kicker">Teacher Workspace</span>
-                        <h2>教师运营台</h2>
-                    </div>
-                </div>
 
                 <div id="overviewCards" class="stats-grid"></div>
 
                 <div class="workspace-grid">
-                    <section class="panel panel-paper collapsible-panel">
-                        <details open>
-                            <summary class="panel-summary">
-                                <div class="panel-heading compact-heading">
-                                    <span class="panel-kicker">Course Console</span>
-                                    <h3>课程与选课管理</h3>
-                                </div>
-                                <span class="accordion-indicator" aria-hidden="true"></span>
-                            </summary>
-                            <div class="panel-content">
-                                <div class="course-console-layout">
-                                    <div class="course-console-left">
-                                        <form id="courseForm" class="form-stack">
-                                            <label>
-                                                <span>课程代码</span>
-                                                <input type="text" name="code" placeholder="例如：CS101" required>
-                                            </label>
-                                            <label>
-                                                <span>课程名称</span>
-                                                <input type="text" name="name" placeholder="例如：程序设计基础" required>
-                                            </label>
-                                            <div class="split-grid">
-                                                <label>
-                                                    <span>学期</span>
-                                                    <input type="text" name="term" placeholder="例如：2026春" required>
-                                                </label>
-                                                <label>
-                                                    <span>班级</span>
-                                                    <input type="text" name="className" placeholder="例如：软件工程01班" required>
-                                                </label>
-                                            </div>
-                                            <label id="courseActiveToggle" class="toggle-field hidden">
-                                                <input id="courseActiveInput" type="checkbox" name="active" checked>
-                                                <span>课程启用</span>
-                                            </label>
-                                            <div class="split-grid">
-                                                <button id="courseSubmitButton" type="submit" class="btn btn-secondary btn-block">创建课程</button>
-                                                <button id="courseCancelEditButton" type="button" class="btn btn-ghost btn-block hidden">取消编辑</button>
-                                            </div>
-                                        </form>
-                                        <div id="teacherCourses" class="course-card-grid compact-list"></div>
-                                    </div>
-
-                                    <div class="course-console-right">
-                                        <div class="transfer-header">
-                                            <div>
-                                                <span class="panel-kicker">Enrollment</span>
-                                                <h4 id="selectedCourseTitle">选择课程后管理选课</h4>
-                                            </div>
-                                        </div>
-                                        <div class="transfer-grid">
-                                            <section class="transfer-panel">
-                                                <div class="transfer-title">待加入学生</div>
-                                                <div id="availableStudentList" class="transfer-list"></div>
-                                            </section>
-                                            <section class="transfer-actions">
-                                                <button id="enrollSelectedButton" type="button" class="btn btn-secondary">加入课程</button>
-                                                <button id="removeEnrollmentButton" type="button" class="btn btn-ghost">移出课程</button>
-                                            </section>
-                                            <section class="transfer-panel">
-                                                <div class="transfer-title">已选学生</div>
-                                                <div id="courseEnrollmentList" class="transfer-list"></div>
-                                            </section>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </details>
-                    </section>
-
                     <section class="panel panel-paper collapsible-panel">
                         <details>
                             <summary class="panel-summary">
@@ -592,13 +497,13 @@
                             </div>
                             <span class="accordion-indicator" aria-hidden="true"></span>
                         </summary>
-                        <div class="panel-content">
-                            <div id="teacherSubmissionDetail" class="detail-panel empty-state">
-                                选择一条教师端提交记录后，这里会显示编译结果、运行信息和测试用例详情。
+                            <div class="panel-content">
+                                <div id="teacherSubmissionDetail" class="detail-panel empty-state">
+                                    选择一条教师端提交记录后，这里会显示编译结果、运行信息和测试用例详情。
+                                </div>
                             </div>
-                        </div>
-                    </details>
-                </section>
+                        </details>
+                    </section>
 
                 <section class="panel panel-paper collapsible-panel">
                     <details>
@@ -614,15 +519,64 @@
                         </div>
                     </details>
                 </section>
+
+                <section class="panel panel-paper collapsible-panel" id="teacherJoinPanel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Join Class</span>
+                                <h3>加入班级</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <div class="join-filter-bar">
+                                <select id="teacherJoinTermFilter" class="stat-filter-select">
+                                    <option value="">全部学期</option>
+                                </select>
+                                <div class="stat-filter-search" style="flex:1">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                    <input id="teacherJoinSearch" type="search" placeholder="搜索课程班级名称">
+                                </div>
+                                <button id="teacherJoinRefreshBtn" class="btn btn-small btn-ghost">刷新</button>
+                            </div>
+                            <div id="teacherJoinList" class="join-course-grid"></div>
+                        </div>
+                    </details>
+                </section>
+
+                <section class="panel panel-paper collapsible-panel" id="teacherProfilePanel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Profile</span>
+                                <h3>信息修改</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <form id="teacherProfileForm" class="form-stack profile-form">
+                                <label>
+                                    <span>姓名</span>
+                                    <input type="text" name="fullName" id="teacherFullNameInput" placeholder="请输入姓名">
+                                </label>
+                                <label>
+                                    <span>旧密码</span>
+                                    <input type="password" name="oldPassword" placeholder="修改密码时填写">
+                                </label>
+                                <label>
+                                    <span>新密码</span>
+                                    <input type="password" name="newPassword" placeholder="留空则不修改密码">
+                                </label>
+                                <button type="submit" class="btn btn-primary">保存修改</button>
+                            </form>
+                            <div id="teacherProfileMessage" class="message-box" aria-live="polite"></div>
+                        </div>
+                    </details>
+                </section>
             </section>
 
             <section id="studentSection" class="role-section hidden">
-                <div class="section-heading">
-                    <div>
-                        <span class="section-kicker">Student Workspace</span>
-                        <h2>学生提交台</h2>
-                    </div>
-                </div>
 
                 <div class="workspace-grid">
                     <section class="panel panel-paper collapsible-panel">
@@ -723,10 +677,72 @@
                                 <div id="submissionDetail" class="detail-panel empty-state">
                                     选择一条提交记录后，这里会显示编译结果、运行信息和每个测试用例的通过情况。
                                 </div>
+                                <div id="studentAiDiagnosisPanel" class="detail-panel empty-state">
+                                    发起 AI 辅助分析后，这里会显示问题概述、修改建议和知识点提示。
+                                </div>
                             </div>
                         </details>
                     </section>
                 </div>
+
+                <section class="panel panel-paper collapsible-panel" id="studentJoinPanel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Join Class</span>
+                                <h3>加入班级</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <div class="join-filter-bar">
+                                <select id="studentJoinTermFilter" class="stat-filter-select">
+                                    <option value="">全部学期</option>
+                                </select>
+                                <div class="stat-filter-search" style="flex:1">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                                    <input id="studentJoinSearch" type="search" placeholder="搜索课程班级名称">
+                                </div>
+                                <button id="studentJoinRefreshBtn" class="btn btn-small btn-ghost">刷新</button>
+                            </div>
+                            <div id="studentJoinList" class="join-course-grid"></div>
+                        </div>
+                    </details>
+                </section>
+
+                <section class="panel panel-paper collapsible-panel" id="studentProfilePanel">
+                    <details>
+                        <summary class="panel-summary">
+                            <div class="panel-heading compact-heading">
+                                <span class="panel-kicker">Profile</span>
+                                <h3>信息修改</h3>
+                            </div>
+                            <span class="accordion-indicator" aria-hidden="true"></span>
+                        </summary>
+                        <div class="panel-content">
+                            <form id="studentProfileForm" class="form-stack profile-form">
+                                <label>
+                                    <span>姓名</span>
+                                    <input type="text" name="fullName" id="studentFullNameInput" placeholder="请输入姓名">
+                                </label>
+                                <label>
+                                    <span>班级</span>
+                                    <input type="text" name="className" id="studentClassNameInput" placeholder="例如：软件工程1班">
+                                </label>
+                                <label>
+                                    <span>旧密码</span>
+                                    <input type="password" name="oldPassword" placeholder="修改密码时填写">
+                                </label>
+                                <label>
+                                    <span>新密码</span>
+                                    <input type="password" name="newPassword" placeholder="留空则不修改密码">
+                                </label>
+                                <button type="submit" class="btn btn-primary">保存修改</button>
+                            </form>
+                            <div id="studentProfileMessage" class="message-box" aria-live="polite"></div>
+                        </div>
+                    </details>
+                </section>
             </section>
         </section>
     </main>
@@ -750,6 +766,35 @@
         </label>
     </div>
 </template>
+
+<dialog id="resetPasswordDialog">
+    <form method="dialog" class="form-stack">
+        <div class="panel-heading compact-heading">
+            <h3>重置用户密码</h3>
+        </div>
+        <label>
+            <span>新密码</span>
+            <input id="resetPasswordInput" type="password" placeholder="请输入新密码" required>
+        </label>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button type="button" id="resetPasswordCancelButton" class="btn btn-ghost">取消</button>
+            <button type="submit" id="resetPasswordConfirmButton" class="btn btn-primary">确认重置</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="confirmDialog">
+    <div class="form-stack">
+        <div class="panel-heading compact-heading">
+            <h3 id="confirmDialogTitle">确认操作</h3>
+        </div>
+        <p id="confirmDialogMessage" class="muted"></p>
+        <div style="display:flex;gap:10px;justify-content:flex-end">
+            <button type="button" id="confirmDialogCancelButton" class="btn btn-ghost">取消</button>
+            <button type="button" id="confirmDialogOkButton" class="btn btn-primary">确认</button>
+        </div>
+    </div>
+</dialog>
 
 <script src="/app.js"></script>
 </body>

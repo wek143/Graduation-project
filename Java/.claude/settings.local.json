@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"/d/Graduation project/Java/src/main/resources/static\" && grep -n \"availableCourse\\\\|discoverCourse\\\\|browseCourse\\\\|joinCourse\\\\|selectCourse\\\\|enrollCourse\" app.js | head -20)",
+      "Read(//d/d/Graduation project/Java/src/main/resources/static/**)"
+    ]
+  }
+}

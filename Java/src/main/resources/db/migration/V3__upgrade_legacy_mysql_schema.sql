@@ -1,0 +1,6 @@
+ALTER TABLE users
+    ADD COLUMN active BIT NOT NULL DEFAULT b'1';
+
+ALTER TABLE test_cases
+    MODIFY COLUMN input_data LONGTEXT NOT NULL,
+    MODIFY COLUMN expected_output LONGTEXT NOT NULL;

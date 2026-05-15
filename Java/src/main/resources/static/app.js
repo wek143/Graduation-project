@@ -1,5 +1,4 @@
 ﻿const ROUTES = {
-    launch: "launch",
     login: "login",
     register: "register",
     admin: "admin",
@@ -51,11 +50,10 @@ const ADMIN_LIST_CONFIG = {
 };
 
 const state = {
-    auth: readJson("autograding-auth"),
+    auth: null,
     profile: null,
     assignments: [],
     courses: [],
-    students: [],
     auditLogs: [],
     teacherStatistics: {
         courseStats: [],
@@ -66,11 +64,6 @@ const state = {
             status: ""
         }
     },
-    selectedCourseEnrollments: [],
-    selectedCourseId: null,
-    editingCourseId: null,
-    selectedAvailableStudentId: null,
-    selectedEnrolledStudentId: null,
     latestSummaries: [],
     selectedSubmission: null,
     adminLists: createAdminListState(),
@@ -78,21 +71,18 @@ const state = {
         teacher: null,
         student: null
     },
-    route: ROUTES.launch,
-    submissionPollTimer: null
+    route: ROUTES.login,
+    submissionPollTimer: null,
+    submissionPollAttempts: 0
 };
 
 const el = {
-    launchView: byId("launchView"),
     authView: byId("authView"),
     appView: byId("appView"),
     publicNav: byId("publicNav"),
     privateNav: byId("privateNav"),
-    launchNavButton: byId("launchNavButton"),
     navLoginButton: byId("navLoginButton"),
     navRegisterButton: byId("navRegisterButton"),
-    launchLoginButton: byId("launchLoginButton"),
-    launchRegisterButton: byId("launchRegisterButton"),
     loginTabButton: byId("loginTabButton"),
     registerTabButton: byId("registerTabButton"),
     loginForm: byId("loginForm"),
@@ -117,20 +107,16 @@ const el = {
     adminCourseList: byId("adminCourseList"),
     adminAssignmentList: byId("adminAssignmentList"),
     adminAuditLogList: byId("adminAuditLogList"),
+    adminAiSettingsForm: byId("adminAiSettingsForm"),
+    adminAiEnabledInput: byId("adminAiEnabledInput"),
+    adminAiBaseUrlInput: byId("adminAiBaseUrlInput"),
+    adminAiModelInput: byId("adminAiModelInput"),
+    adminAiApiKeyInput: byId("adminAiApiKeyInput"),
+    adminAiTimeoutInput: byId("adminAiTimeoutInput"),
+    adminAiSettingsStatus: byId("adminAiSettingsStatus"),
     teacherSection: byId("teacherSection"),
     studentSection: byId("studentSection"),
     overviewCards: byId("overviewCards"),
-    courseForm: byId("courseForm"),
-    courseSubmitButton: byId("courseSubmitButton"),
-    courseCancelEditButton: byId("courseCancelEditButton"),
-    courseActiveToggle: byId("courseActiveToggle"),
-    courseActiveInput: byId("courseActiveInput"),
-    teacherCourses: byId("teacherCourses"),
-    selectedCourseTitle: byId("selectedCourseTitle"),
-    availableStudentList: byId("availableStudentList"),
-    enrollSelectedButton: byId("enrollSelectedButton"),
-    removeEnrollmentButton: byId("removeEnrollmentButton"),
-    courseEnrollmentList: byId("courseEnrollmentList"),
     importUsersForm: byId("importUsersForm"),
     importCoursesForm: byId("importCoursesForm"),
     importEnrollmentsForm: byId("importEnrollmentsForm"),
@@ -152,6 +138,15 @@ const el = {
     sourceCodeInput: byId("sourceCodeInput"),
     studentSummaries: byId("studentSummaries"),
     submissionDetail: byId("submissionDetail"),
+    studentAiDiagnosisPanel: byId("studentAiDiagnosisPanel"),
+    resetPasswordDialog: byId("resetPasswordDialog"),
+    resetPasswordInput: byId("resetPasswordInput"),
+    resetPasswordCancelButton: byId("resetPasswordCancelButton"),
+    confirmDialog: byId("confirmDialog"),
+    confirmDialogTitle: byId("confirmDialogTitle"),
+    confirmDialogMessage: byId("confirmDialogMessage"),
+    confirmDialogCancelButton: byId("confirmDialogCancelButton"),
+    confirmDialogOkButton: byId("confirmDialogOkButton"),
     testCaseTemplate: byId("testCaseTemplate"),
     useDemoButtons: [...document.querySelectorAll(".use-demo-button")]
 };
@@ -175,9 +170,15 @@ function boot() {
     if (el.sourceCodeInput) {
         el.sourceCodeInput.value = DEFAULT_CODE;
     }
-    setMessage(el.authMessage, "可直接使用演示账号登录。");
+    setMessage(el.authMessage, "点击下方演示账号可快速填入。");
     setMessage(el.dashboardMessage, "登录后进入对应工作台。");
     handleRouteChange();
+    const storedAuth = readJson("autograding-auth");
+    if (isStoredAuthExpired(storedAuth)) {
+        localStorage.removeItem("autograding-auth");
+        return;
+    }
+    state.auth = storedAuth;
     if (state.auth?.token) {
         hydrateSession({ silent: true });
     }
@@ -185,21 +186,24 @@ function boot() {
 
 function bindEvents() {
     window.addEventListener("hashchange", handleRouteChange);
-    el.launchNavButton?.addEventListener("click", () => navigate(ROUTES.launch));
     el.navLoginButton?.addEventListener("click", () => navigate(ROUTES.login));
     el.navRegisterButton?.addEventListener("click", () => navigate(ROUTES.register));
-    el.launchLoginButton?.addEventListener("click", () => navigate(ROUTES.login));
-    el.launchRegisterButton?.addEventListener("click", () => navigate(ROUTES.register));
-    el.loginTabButton?.addEventListener("click", () => navigate(ROUTES.login));
-    el.registerTabButton?.addEventListener("click", () => navigate(ROUTES.register));
+    el.loginTabButton?.addEventListener("click", () => navigate(ROUTES.register));
+    el.registerTabButton?.addEventListener("click", () => navigate(ROUTES.login));
     el.loginForm?.addEventListener("submit", onLogin);
     el.registerForm?.addEventListener("submit", onRegister);
+    const pwdToggle = document.getElementById("loginPasswordToggle");
+    if (pwdToggle && el.loginPasswordInput) {
+        pwdToggle.addEventListener("click", () => {
+            const isText = el.loginPasswordInput.type === "text";
+            el.loginPasswordInput.type = isText ? "password" : "text";
+            pwdToggle.querySelector(".eye-open").classList.toggle("hidden", !isText);
+            pwdToggle.querySelector(".eye-closed").classList.toggle("hidden", isText);
+        });
+    }
     el.logoutButton?.addEventListener("click", onLogout);
     el.refreshDashboardButton?.addEventListener("click", hydrateSession);
-    el.courseForm?.addEventListener("submit", onCreateCourse);
-    el.courseCancelEditButton?.addEventListener("click", resetCourseForm);
-    el.enrollSelectedButton?.addEventListener("click", onEnrollStudent);
-    el.removeEnrollmentButton?.addEventListener("click", onRemoveEnrollment);
+    el.adminAiSettingsForm?.addEventListener("submit", onSaveAiSettings);
     el.importUsersForm?.addEventListener("submit", (event) => onImportCsv(event, "users"));
     el.importCoursesForm?.addEventListener("submit", (event) => onImportCsv(event, "courses"));
     el.importEnrollmentsForm?.addEventListener("submit", (event) => onImportCsv(event, "enrollments"));
@@ -254,6 +258,7 @@ function initializeAdminPortal() {
     }
 
     setupAdminListControls();
+    bindAdminCourseForm();
     bindPortalNav(section, "admin");
     section.dataset.portalReady = "true";
 }
@@ -264,9 +269,7 @@ function initializeTeacherPortal() {
         return;
     }
 
-    const heading = section.querySelector(".section-heading");
     const overview = el.overviewCards;
-    const coursesPanel = el.teacherCourses?.closest(".panel");
     const createPanel = el.assignmentForm?.closest(".panel");
     const libraryPanel = el.teacherAssignments?.closest(".panel");
     const submissionsPanel = el.teacherSubmissions?.closest(".panel");
@@ -275,19 +278,22 @@ function initializeTeacherPortal() {
     const detailPanel = el.teacherSubmissionDetail?.closest(".panel");
     const importPanel = el.importUsersForm?.closest(".panel");
     const auditPanel = el.auditLogList?.closest(".panel");
+    const joinPanel = byId("teacherJoinPanel");
+    const profilePanel = byId("teacherProfilePanel");
 
     const shell = document.createElement("div");
     shell.className = "portal-shell";
     shell.innerHTML = `
         <aside class="portal-sidebar">
-            <div class="portal-sidebar-title">教师功能</div>
-            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="">首页</button>
-            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-courses">课程与选课</button>
-            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-create">创建作业</button>
+            <div class="portal-sidebar-title">教师工作台</div>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="">工作台</button>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-join">加入班级</button>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-create">发布作业</button>
             <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-library">作业管理</button>
-            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-submissions">查看提交</button>
-            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-statistics">评分统计</button>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-submissions">提交记录</button>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-statistics">统计分析</button>
             <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-import">批量导入</button>
+            <button type="button" class="portal-nav-item" data-portal-role="teacher" data-module-target="teacher-profile">信息修改</button>
         </aside>
         <div class="portal-main"></div>
     `;
@@ -297,31 +303,44 @@ function initializeTeacherPortal() {
     homePanel.innerHTML = `
         <div class="portal-home-card">
             <div class="portal-home-copy">
-                <h3>XX大学欢迎您</h3>
-                <p>请选择左侧功能进入相应业务操作。</p>
+                <h3>教师工作台</h3>
+                <p>查看课程与作业的最新动态。</p>
             </div>
             <div id="teacherClock" class="portal-home-clock">--:--:--</div>
         </div>
     `;
-    if (overview) {
-        homePanel.appendChild(overview);
-    }
+    const dashGrid = document.createElement("div");
+    dashGrid.className = "teacher-dashboard-grid";
+    dashGrid.innerHTML = `
+        <div class="portal-panel-card">
+            <div class="portal-panel-head"><h3>待截止作业</h3><span class="panel-kicker">近期截止</span></div>
+            <div id="teacherHomeDue" class="stack-list"></div>
+        </div>
+        <div class="portal-panel-card">
+            <div class="portal-panel-head"><h3>最近提交</h3><span class="panel-kicker">按时间排序</span></div>
+            <div id="teacherHomeActivity" class="stack-list"></div>
+        </div>
+    `;
+    homePanel.appendChild(dashGrid);
     main.appendChild(homePanel);
 
-    movePanelToPortal(main, "teacher-courses", coursesPanel);
+    movePanelToPortal(main, "teacher-join", joinPanel);
     movePanelToPortal(main, "teacher-create", createPanel);
     moveContentToPortal(main, "teacher-library", "作业与用例管理", el.teacherAssignments);
     moveContentToPortal(main, "teacher-submissions", "查看提交", submissionControls, el.teacherSubmissions, el.teacherSubmissionDetail);
     movePanelToPortal(main, "teacher-statistics", statsPanel);
     movePanelToPortal(main, "teacher-import", importPanel);
+    movePanelToPortal(main, "teacher-profile", profilePanel);
 
-    heading?.insertAdjacentElement("afterend", shell);
+    section.prepend(shell);
     cleanupEmptyContainers(section);
     libraryPanel?.remove();
     submissionsPanel?.remove();
     detailPanel?.remove();
     auditPanel?.remove();
     bindPortalNav(section, "teacher");
+    bindJoinPanel("teacher");
+    bindProfileForm("teacher");
     section.dataset.portalReady = "true";
 }
 
@@ -331,7 +350,6 @@ function initializeStudentPortal() {
         return;
     }
 
-    const heading = section.querySelector(".section-heading");
     const coursesPanel = el.studentCourses?.closest(".panel");
     const assignmentsPanel = el.studentAssignments?.closest(".panel");
     const submitPanel = el.submissionForm?.closest(".panel");
@@ -344,11 +362,13 @@ function initializeStudentPortal() {
         <aside class="portal-sidebar">
             <div class="portal-sidebar-title">学生功能</div>
             <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="">首页</button>
-            <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-courses">课程选择</button>
+            <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-join">加入班级</button>
+            <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-courses">我的课程</button>
             <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-assignments">已发布作业</button>
             <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-submit">代码提交</button>
             <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-results">最近提交</button>
             <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-detail">评测详情</button>
+            <button type="button" class="portal-nav-item" data-portal-role="student" data-module-target="student-profile">信息修改</button>
         </aside>
         <div class="portal-main"></div>
     `;
@@ -364,17 +384,24 @@ function initializeStudentPortal() {
             <div id="studentClock" class="portal-home-clock">--:--:--</div>
         </div>
     `;
+    const joinPanel = byId("studentJoinPanel");
+    const profilePanel = byId("studentProfilePanel");
+
     main.appendChild(homePanel);
 
+    movePanelToPortal(main, "student-join", joinPanel);
     movePanelToPortal(main, "student-courses", coursesPanel);
     movePanelToPortal(main, "student-assignments", assignmentsPanel);
     movePanelToPortal(main, "student-submit", submitPanel);
     movePanelToPortal(main, "student-results", summariesPanel);
     movePanelToPortal(main, "student-detail", detailPanel);
+    movePanelToPortal(main, "student-profile", profilePanel);
 
-    heading?.insertAdjacentElement("afterend", shell);
+    section.prepend(shell);
     cleanupEmptyContainers(section);
     bindPortalNav(section, "student");
+    bindJoinPanel("student");
+    bindProfileForm("student");
     section.dataset.portalReady = "true";
 }
 
@@ -475,8 +502,12 @@ function flattenPanelDetails(panel) {
 function bindPortalNav(section, role) {
     section.querySelectorAll(`.portal-nav-item[data-portal-role="${role}"]`).forEach((button) => {
         button.addEventListener("click", () => {
-            state.activePortalModule[role] = button.dataset.moduleTarget || null;
+            const target = button.dataset.moduleTarget || null;
+            state.activePortalModule[role] = target;
             renderPortalModules();
+            if (target === `${role}-join`) {
+                loadJoinCourses(role);
+            }
         });
     });
 }
@@ -578,6 +609,28 @@ function updatePortalClocks() {
     }
 }
 
+function isStoredAuthExpired(auth) {
+    if (!auth?.expiresAt) {
+        return false;
+    }
+    const expiresAt = new Date(auth.expiresAt);
+    return !Number.isNaN(expiresAt.getTime()) && expiresAt.getTime() < Date.now();
+}
+
+function setSubmitButtonLoading(formElement, loadingText) {
+    const button = formElement?.querySelector('[type="submit"]');
+    if (!button) {
+        return () => {};
+    }
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = loadingText;
+    return () => {
+        button.disabled = false;
+        button.textContent = originalText;
+    };
+}
+
 function handleRouteChange() {
     const requestedRoute = getRouteFromHash();
     const route = resolveRoute(requestedRoute);
@@ -590,7 +643,7 @@ function handleRouteChange() {
 
 function getRouteFromHash() {
     const raw = window.location.hash.replace(/^#\/?/, "");
-    return Object.values(ROUTES).includes(raw) ? raw : ROUTES.launch;
+    return Object.values(ROUTES).includes(raw) ? raw : ROUTES.login;
 }
 
 function resolveRoute(route) {
@@ -606,7 +659,6 @@ function resolveRoute(route) {
 function renderRoute(route) {
     const isAuthRoute = route === ROUTES.login || route === ROUTES.register;
     const isAppRoute = route === ROUTES.admin || route === ROUTES.teacher || route === ROUTES.student;
-    el.launchView?.classList.toggle("hidden", route !== ROUTES.launch);
     el.authView?.classList.toggle("hidden", !isAuthRoute);
     el.appView?.classList.toggle("hidden", !isAppRoute);
     el.publicNav?.classList.toggle("hidden", isAppRoute);
@@ -622,7 +674,9 @@ function renderRoute(route) {
 
 async function onLogin(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "登录中...");
+    const form = new FormData(formElement);
     setMessage(el.authMessage, "正在登录，请稍候...");
     try {
         acceptAuth(await api("/api/auth/login", {
@@ -632,12 +686,16 @@ async function onLogin(event) {
         await hydrateSession({ successMessage: "登录成功，已进入工作台。" });
     } catch (error) {
         notify(el.authMessage, error.message, "error", "登录失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
 async function onRegister(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "注册中...");
+    const form = new FormData(formElement);
     setMessage(el.authMessage, "正在注册，请稍候...");
     try {
         acceptAuth(await api("/api/auth/register", {
@@ -653,6 +711,8 @@ async function onRegister(event) {
         await hydrateSession({ successMessage: "注册成功，已自动登录并进入工作台。" });
     } catch (error) {
         notify(el.authMessage, error.message, "error", "注册失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -678,7 +738,7 @@ async function onLogout() {
     renderSession();
     notify(el.authMessage, "已退出登录。", "success", "退出成功");
     setMessage(el.dashboardMessage, "已退出登录。", "success");
-    navigate(ROUTES.launch);
+    navigate(ROUTES.login);
 }
 
 async function hydrateSession(options = {}) {
@@ -706,7 +766,7 @@ async function hydrateSession(options = {}) {
         resetWorkspace();
         renderSession();
         if (options.silent) {
-            setMessage(el.authMessage, "可直接使用演示账号登录。");
+            setMessage(el.authMessage, "点击下方演示账号可快速填入。");
             setMessage(el.dashboardMessage, "登录后进入对应工作台。");
         } else {
             notify(el.authMessage, error.message, "error", "登录状态异常");
@@ -716,41 +776,27 @@ async function hydrateSession(options = {}) {
     }
 }
 async function loadTeacherDashboard(successMessage, suppressToast = false) {
-    const [overview, assignments, assignmentStats, courseStats, courses, students] = await Promise.all([
+    const [overview, assignments, assignmentStats, courseStats, courses] = await Promise.all([
         api("/api/users/overview"),
         api("/api/assignments"),
         api("/api/assignments/statistics/overview"),
         api("/api/courses/statistics/overview"),
-        api("/api/courses"),
-        api("/api/users/role/STUDENT")
+        api("/api/courses")
     ]);
 
     state.assignments = assignments;
     state.courses = courses;
-    state.students = students;
     state.teacherStatistics.courseStats = courseStats;
     state.teacherStatistics.assignmentStats = assignmentStats;
 
-    el.overviewCards.innerHTML = [
-        statCard("教师人数", overview.teacherCount, "账号总览"),
-        statCard("学生人数", overview.studentCount, "参与用户"),
-        statCard("作业总数", overview.assignmentCount, "全部作业"),
-        statCard("已发布作业", overview.publishedAssignmentCount, "当前开放"),
-        statCard("提交总量", overview.submissionCount, "评测记录")
-    ].join("");
+    if (el.overviewCards) el.overviewCards.innerHTML = "";
 
-    renderTeacherCourses(courses);
+    renderTeacherHomeDue(assignments);
+    renderTeacherHomeActivity(assignmentStats);
     renderTeacherAssignments(assignments);
     renderTeacherStatistics();
-    fillEntitySelect(el.assignmentCourseSelect, courses, "请选择课程", (course) => `${course.code} · ${course.name}`);
+    fillEntitySelect(el.assignmentCourseSelect, courses, "请选择课程", (course) => `${course.code ? course.code + " · " : ""}${course.name}`);
     fillEntitySelect(el.submissionAssignmentSelect, assignments, "选择作业查看提交", (assignment) => assignment.title);
-    if (!courses.some((course) => String(course.id) === String(state.selectedCourseId))) {
-        state.selectedCourseId = courses.length ? courses[0].id : null;
-    }
-    if (state.editingCourseId && !courses.some((course) => String(course.id) === String(state.editingCourseId))) {
-        resetCourseForm();
-    }
-    await refreshSelectedCourseEnrollments();
 
     const message = successMessage || "教师端数据已刷新，可以继续发布作业、查看提交和统计信息。";
     if (suppressToast) {
@@ -761,8 +807,9 @@ async function loadTeacherDashboard(successMessage, suppressToast = false) {
 }
 
 async function loadAdminDashboard(successMessage, suppressToast = false) {
-    const [overview] = await Promise.all([
+    const [overview, aiSettings] = await Promise.all([
         api("/api/users/overview"),
+        api("/api/admin/ai-settings"),
         ...Object.keys(ADMIN_LIST_CONFIG).map((key) => loadAdminList(key))
     ]);
 
@@ -773,6 +820,7 @@ async function loadAdminDashboard(successMessage, suppressToast = false) {
         statCard("已发布作业", overview.publishedAssignmentCount, "当前开放"),
         statCard("提交总量", overview.submissionCount, "全局记录")
     ].join("");
+    renderAdminAiSettings(aiSettings);
 
     const message = successMessage || "管理员工作台数据已刷新。";
     if (suppressToast) {
@@ -896,148 +944,6 @@ async function loadStudentDashboard(successMessage, suppressToast = false) {
     }
 }
 
-function fillCourseForm(course) {
-    if (!el.courseForm) {
-        return;
-    }
-    el.courseForm.elements.code.value = course.code || "";
-    el.courseForm.elements.name.value = course.name || "";
-    el.courseForm.elements.term.value = course.term || "";
-    el.courseForm.elements.className.value = course.className || "";
-    if (el.courseActiveInput) {
-        el.courseActiveInput.checked = course.active !== false;
-    }
-}
-
-function resetCourseForm() {
-    state.editingCourseId = null;
-    el.courseForm?.reset();
-    if (el.courseActiveInput) {
-        el.courseActiveInput.checked = true;
-    }
-    el.courseActiveToggle?.classList.add("hidden");
-    el.courseCancelEditButton?.classList.add("hidden");
-    if (el.courseSubmitButton) {
-        el.courseSubmitButton.textContent = "创建课程";
-    }
-}
-
-function startCourseEdit(courseId) {
-    const course = state.courses.find((item) => String(item.id) === String(courseId));
-    if (!course) {
-        notify(el.dashboardMessage, "未找到要编辑的课程。", "error", "编辑失败");
-        return;
-    }
-    state.editingCourseId = Number(courseId);
-    state.selectedCourseId = Number(courseId);
-    fillCourseForm(course);
-    el.courseActiveToggle?.classList.remove("hidden");
-    el.courseCancelEditButton?.classList.remove("hidden");
-    if (el.courseSubmitButton) {
-        el.courseSubmitButton.textContent = "保存课程";
-    }
-    renderTeacherCourses(state.courses);
-    refreshSelectedCourseEnrollments();
-    el.courseForm?.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-async function onDeleteCourse(courseId) {
-    const course = state.courses.find((item) => String(item.id) === String(courseId));
-    if (!course) {
-        notify(el.dashboardMessage, "未找到要删除的课程。", "error", "删除失败");
-        return;
-    }
-    if (!window.confirm(`确定删除课程“${course.code} · ${course.name}”吗？`)) {
-        return;
-    }
-    try {
-        await api(`/api/courses/${courseId}`, { method: "DELETE" });
-        if (String(state.selectedCourseId) === String(courseId)) {
-            state.selectedCourseId = null;
-        }
-        if (String(state.editingCourseId) === String(courseId)) {
-            resetCourseForm();
-        }
-        await loadTeacherDashboard("课程已删除。");
-    } catch (error) {
-        notify(el.dashboardMessage, error.message, "error", "删除课程失败");
-    }
-}
-
-async function onCreateCourse(event) {
-    event.preventDefault();
-    const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const payload = {
-        code: form.get("code"),
-        name: form.get("name"),
-        term: form.get("term"),
-        className: form.get("className")
-    };
-    try {
-        if (state.editingCourseId) {
-            payload.active = form.get("active") === "on";
-            const updatedCourse = await api(`/api/courses/${state.editingCourseId}`, {
-                method: "PUT",
-                body: JSON.stringify(payload)
-            });
-            state.selectedCourseId = updatedCourse.id;
-            resetCourseForm();
-            await loadTeacherDashboard("课程已更新。");
-            return;
-        }
-
-        const createdCourse = await api("/api/courses", {
-            method: "POST",
-            body: JSON.stringify(payload)
-        });
-        state.selectedCourseId = createdCourse.id;
-        resetCourseForm();
-        await loadTeacherDashboard("课程已创建。");
-    } catch (error) {
-        notify(el.dashboardMessage, error.message, "error",
-            state.editingCourseId ? "更新课程失败" : "创建课程失败");
-    }
-}
-
-async function onEnrollStudent() {
-    const courseId = state.selectedCourseId;
-    const studentId = state.selectedAvailableStudentId;
-
-    if (!courseId || !studentId) {
-        notify(el.dashboardMessage, "请先选择课程和待加入学生。", "error", "选课失败");
-        return;
-    }
-
-    try {
-        await api(`/api/courses/${courseId}/enrollments/${studentId}`, { method: "POST" });
-        state.selectedAvailableStudentId = null;
-        await refreshSelectedCourseEnrollments();
-        notify(el.dashboardMessage, "学生已加入课程。", "success", "选课成功");
-    } catch (error) {
-        notify(el.dashboardMessage, error.message, "error", "选课失败");
-    }
-}
-
-async function onRemoveEnrollment() {
-    const courseId = state.selectedCourseId;
-    const studentId = state.selectedEnrolledStudentId;
-
-    if (!courseId || !studentId) {
-        notify(el.dashboardMessage, "请先选择课程中的学生。", "error", "移出失败");
-        return;
-    }
-
-    try {
-        await api(`/api/courses/${courseId}/enrollments/${studentId}`, { method: "DELETE" });
-        state.selectedEnrolledStudentId = null;
-        await refreshSelectedCourseEnrollments();
-        notify(el.dashboardMessage, "学生已移出课程。", "success", "移出成功");
-    } catch (error) {
-        notify(el.dashboardMessage, error.message, "error", "移出失败");
-    }
-}
-
 async function onImportCsv(event, importType) {
     event.preventDefault();
     const formElement = event.currentTarget;
@@ -1057,6 +963,7 @@ async function onImportCsv(event, importType) {
 async function onCreateAssignment(event) {
     event.preventDefault();
     const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "发布中...");
     const form = new FormData(formElement);
     try {
         await api("/api/assignments", {
@@ -1079,6 +986,8 @@ async function onCreateAssignment(event) {
         await loadTeacherDashboard("作业已创建并刷新到列表中。");
     } catch (error) {
         notify(el.dashboardMessage, error.message, "error", "发布失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -1111,7 +1020,9 @@ async function loadTeacherSubmissionsWithOptions(options = {}) {
 
 async function onSubmitCode(event) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const restoreSubmitButton = setSubmitButtonLoading(formElement, "提交中...");
+    const form = new FormData(formElement);
     try {
         const submission = await api("/api/submissions", {
             method: "POST",
@@ -1128,6 +1039,8 @@ async function onSubmitCode(event) {
         await loadStudentDashboard("提交成功，已加入后台评测队列。");
     } catch (error) {
         notify(el.dashboardMessage, error.message, "error", "提交失败");
+    } finally {
+        restoreSubmitButton();
     }
 }
 
@@ -1147,106 +1060,57 @@ function renderSession() {
         : "请先登录系统";
     el.tokenExpiryLabel.textContent = authenticated ? formatLoginStatus(state.auth.expiresAt) : "请先登录系统";
 }
-function renderTeacherCourses(items) {
-    if (!el.teacherCourses) {
+function renderTeacherHomeDue(assignments) {
+    const container = byId("teacherHomeDue");
+    if (!container) return;
+    const now = Date.now();
+    const upcoming = assignments
+        .filter((a) => a.status === "PUBLISHED" && a.deadline && new Date(a.deadline).getTime() > now)
+        .sort((a, b) => new Date(a.deadline) - new Date(b.deadline))
+        .slice(0, 6);
+    if (!upcoming.length) {
+        container.innerHTML = `<div class="empty-state">暂无即将截止的作业。</div>`;
         return;
     }
-    el.teacherCourses.innerHTML = items.length ? items.map((course) => `
-        <article class="stack-item course-card ${String(state.selectedCourseId) === String(course.id) ? "is-active" : ""}" data-course-card-id="${course.id}">
+    container.innerHTML = upcoming.map((a) => {
+        const ms = new Date(a.deadline).getTime() - now;
+        const days = Math.ceil(ms / 86400000);
+        const urgency = days <= 1 ? "danger" : days <= 3 ? "warning" : "info";
+        const urgencyLabel = days <= 1 ? "今日截止" : days <= 3 ? `${days} 天后` : `${days} 天后`;
+        return `
+        <article class="stack-item">
             <div class="inline-header">
-                <h4>${escapeHtml(course.code)} · ${escapeHtml(course.name)}</h4>
-                <span class="pill ${course.active ? "status-published" : "status-closed"}">${course.active ? "进行中" : "已停用"}</span>
+                <h4>${escapeHtml(a.title)}</h4>
+                <span class="badge badge-${urgency}">${urgencyLabel}</span>
             </div>
             <div class="stack-meta">
-                <span>学期：${escapeHtml(course.term)}</span>
-                <span>班级：${escapeHtml(course.className || "-")}</span>
+                <span>截止：${formatDateTime(a.deadline)}</span>
+                <span>最多提交 ${a.maxSubmissions} 次</span>
             </div>
-            <div class="stack-actions">
-                <button type="button" class="btn btn-small btn-secondary" data-course-edit-id="${course.id}">编辑</button>
-                <button type="button" class="btn btn-small btn-ghost" data-course-delete-id="${course.id}">删除</button>
-            </div>
-        </article>
-    `).join("") : `<div class="empty-state">当前还没有课程，先创建一个课程吧。</div>`;
-
-    el.teacherCourses.querySelectorAll("[data-course-card-id]").forEach((card) => {
-        card.addEventListener("click", async () => {
-            state.selectedCourseId = Number(card.dataset.courseCardId);
-            state.selectedAvailableStudentId = null;
-            state.selectedEnrolledStudentId = null;
-            renderTeacherCourses(state.courses);
-            await refreshSelectedCourseEnrollments();
-        });
-    });
-
-    el.teacherCourses.querySelectorAll("[data-course-edit-id]").forEach((button) => {
-        button.addEventListener("click", (event) => {
-            event.stopPropagation();
-            startCourseEdit(button.dataset.courseEditId);
-        });
-    });
-
-    el.teacherCourses.querySelectorAll("[data-course-delete-id]").forEach((button) => {
-        button.addEventListener("click", async (event) => {
-            event.stopPropagation();
-            await onDeleteCourse(button.dataset.courseDeleteId);
-        });
-    });
+        </article>`;
+    }).join("");
 }
 
-function renderAvailableStudents(items) {
-    if (!el.availableStudentList) {
-        return;
-    }
-    if (!items.length) {
-        el.availableStudentList.innerHTML = `
-            <div class="empty-state">
-                当前没有可加入的学生，或所有学生都已在该课程中。
-            </div>
-        `;
-        state.selectedAvailableStudentId = null;
-        return;
-    }
-    el.availableStudentList.innerHTML = items.map((item) => `
-        <article class="stack-item transfer-item ${String(state.selectedAvailableStudentId) === String(item.id) ? "is-active" : ""}" data-available-student-id="${item.id}">
-            <h4>${escapeHtml(item.fullName || item.username)}</h4>
-            <div class="stack-meta">
-                <span>账号：${escapeHtml(item.username)}</span>
-                <span>班级：${escapeHtml(item.className || "-")}</span>
-            </div>
-        </article>
-    `).join("");
-
-    el.availableStudentList.querySelectorAll("[data-available-student-id]").forEach((card) => {
-        card.addEventListener("click", () => {
-            state.selectedAvailableStudentId = Number(card.dataset.availableStudentId);
-            renderAvailableStudents(items);
-        });
-    });
-}
-
-function renderCourseEnrollments(items) {
-    if (!el.courseEnrollmentList) {
-        return;
-    }
-    el.courseEnrollmentList.innerHTML = items.length ? items.map((item) => `
-        <article class="stack-item transfer-item ${String(state.selectedEnrolledStudentId) === String(item.studentId) ? "is-active" : ""}" data-enrolled-student-id="${item.studentId}">
+function renderTeacherHomeActivity(assignmentStats) {
+    const container = byId("teacherHomeActivity");
+    if (!container) return;
+    const items = [...(assignmentStats || [])]
+        .filter((i) => i.totalSubmissions > 0)
+        .sort((a, b) => (b.lastSubmittedAt ? new Date(b.lastSubmittedAt) : 0) - (a.lastSubmittedAt ? new Date(a.lastSubmittedAt) : 0))
+        .slice(0, 6);
+    container.innerHTML = items.length ? items.map((item) => `
+        <article class="stack-item">
             <div class="inline-header">
-                <h4>${escapeHtml(item.studentFullName || item.studentUsername)}</h4>
-                <span class="pill status-published">${formatDateTime(item.enrolledAt)}</span>
+                <h4>${escapeHtml(item.assignmentTitle)}</h4>
+                <span class="pill ${statusClass(item.assignmentStatus)}">${translateStatus(item.assignmentStatus)}</span>
             </div>
             <div class="stack-meta">
-                <span>账号：${escapeHtml(item.studentUsername)}</span>
-                <span>班级：${escapeHtml(item.className || "-")}</span>
+                <span>提交：${item.totalSubmissions}</span>
+                <span>参与学生：${item.distinctStudentCount}</span>
+                <span>平均分：${item.averageScore.toFixed(1)}</span>
             </div>
         </article>
-    `).join("") : `<div class="empty-state">当前课程还没有已选学生。</div>`;
-
-    el.courseEnrollmentList.querySelectorAll("[data-enrolled-student-id]").forEach((card) => {
-        card.addEventListener("click", () => {
-            state.selectedEnrolledStudentId = Number(card.dataset.enrolledStudentId);
-            renderCourseEnrollments(items);
-        });
-    });
+    `).join("") : `<div class="empty-state">暂无提交记录。</div>`;
 }
 
 function renderTeacherAssignments(assignments) {
@@ -1274,7 +1138,7 @@ function renderTeacherAssignments(assignments) {
                     <span class="accordion-indicator" aria-hidden="true"></span>
                 </summary>
                 <div class="assignment-body">
-                    <p>${escapeHtml(item.description)}</p>
+                    <p>${escapeMultilineText(item.description)}</p>
                     <div class="stack-meta">
                         <span>${item.gradingPolicy === "HIGHEST" ? "按最高分计入" : "按最后一次计入"}</span>
                         <span>${item.lateSubmissionAllowed ? "允许逾期提交" : "不允许逾期提交"}</span>
@@ -1283,8 +1147,8 @@ function renderTeacherAssignments(assignments) {
                         ${item.testCases.map((testCase, index) => `
                             <div class="test-case-item">
                                 <strong>用例 ${index + 1}</strong>
-                                <div class="mini-meta"><span>输入：${escapeHtml(testCase.inputData)}</span></div>
-                                <div class="mini-meta"><span>输出：${escapeHtml(testCase.expectedOutput)}</span></div>
+                                <div class="mini-meta"><span>输入：${escapeMultilineText(testCase.inputData)}</span></div>
+                                <div class="mini-meta"><span>输出：${escapeMultilineText(testCase.expectedOutput)}</span></div>
                             </div>
                         `).join("")}
                     </div>
@@ -1327,7 +1191,8 @@ function renderTeacherAssignments(assignments) {
 
     el.teacherAssignments.querySelectorAll("[data-action='delete-assignment']").forEach((button) => {
         button.addEventListener("click", async () => {
-            if (!window.confirm("删除后无法恢复，确认继续吗？")) {
+            const confirmed = await showConfirmDialog("删除作业", "删除后无法恢复，确认继续吗？");
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1366,7 +1231,7 @@ function renderAdminUsers(items) {
 
     el.adminUserList.querySelectorAll("[data-user-reset-id]").forEach((button) => {
         button.addEventListener("click", async () => {
-            const newPassword = window.prompt("请输入新的登录密码：", "123456");
+            const newPassword = await showResetPasswordDialog();
             if (newPassword === null) {
                 return;
             }
@@ -1390,7 +1255,8 @@ function renderAdminUsers(items) {
         button.addEventListener("click", async () => {
             const nextActive = button.dataset.userActive !== "true";
             const actionText = nextActive ? "启用" : "禁用";
-            if (!window.confirm(`确定要${actionText}该账号吗？`)) {
+            const confirmed = await showConfirmDialog(`${actionText}账号`, `确定要${actionText}该账号吗？`);
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1406,23 +1272,279 @@ function renderAdminUsers(items) {
     });
 }
 
-function renderAdminCourses(items) {
-    if (!el.adminCourseList) {
-        return;
+function generateSemesters() {
+    const semesters = [];
+    for (let y = 2026; y >= 2022; y--) {
+        semesters.push(`${y}~${y + 1}第二学期`);
+        semesters.push(`${y}~${y + 1}第一学期`);
     }
+    return semesters;
+}
+
+function fillSemesterSelect(selectEl, includeAll = true) {
+    if (!selectEl) return;
+    const current = selectEl.value;
+    const options = generateSemesters().map((s) => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("");
+    selectEl.innerHTML = (includeAll ? `<option value="">全部学期</option>` : "") + options;
+    if (current) selectEl.value = current;
+}
+
+function renderAdminCourses(items) {
+    if (!el.adminCourseList) return;
     el.adminCourseList.innerHTML = items.length ? items.map((item) => `
         <article class="stack-item">
             <div class="inline-header">
-                <h4>${escapeHtml(item.code)} · ${escapeHtml(item.name)}</h4>
+                <h4>${escapeHtml(item.name)}${item.code ? ` <small class="muted">(${escapeHtml(item.code)})</small>` : ""}</h4>
                 <span class="pill ${item.active ? "status-published" : "status-closed"}">${item.active ? "进行中" : "已停用"}</span>
             </div>
             <div class="stack-meta">
-                <span>教师：${escapeHtml(item.teacherName)}</span>
                 <span>学期：${escapeHtml(item.term)}</span>
                 <span>班级：${escapeHtml(item.className || "-")}</span>
+                <span>任课教师：${item.teacherName ? escapeHtml(item.teacherName) : "<em>待认领</em>"}</span>
+            </div>
+            <div class="stack-actions">
+                <button class="btn btn-small btn-secondary" data-admin-course-edit="${item.id}">编辑</button>
+                <button class="btn btn-small btn-danger" data-admin-course-delete="${item.id}">删除</button>
             </div>
         </article>
-    `).join("") : `<div class="empty-state">暂无课程数据。</div>`;
+    `).join("") : `<div class="empty-state">暂无课程班级数据。</div>`;
+
+    el.adminCourseList.querySelectorAll("[data-admin-course-edit]").forEach((btn) => {
+        btn.addEventListener("click", () => startAdminCourseEdit(Number(btn.dataset.adminCourseEdit), items));
+    });
+    el.adminCourseList.querySelectorAll("[data-admin-course-delete]").forEach((btn) => {
+        btn.addEventListener("click", () => onAdminCourseDelete(Number(btn.dataset.adminCourseDelete)));
+    });
+}
+
+function startAdminCourseEdit(courseId, items) {
+    const item = items.find((c) => c.id === courseId);
+    if (!item) return;
+    const form = byId("adminCourseForm");
+    const createForm = byId("adminCourseCreateForm");
+    const submitBtn = byId("adminCourseSubmitBtn");
+    if (!form || !createForm || !submitBtn) return;
+    form.elements.name.value = item.name || "";
+    form.elements.code.value = item.code || "";
+    form.elements.className.value = item.className || "";
+    fillSemesterSelect(byId("adminCourseTerm"), false);
+    byId("adminCourseTerm").value = item.term || "";
+    submitBtn.textContent = "保存修改";
+    form.dataset.editId = courseId;
+    createForm.classList.remove("hidden");
+    createForm.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+async function onAdminCourseDelete(courseId) {
+    if (!confirm("确认删除该课程班级？此操作不可撤销。")) return;
+    try {
+        await api(`/api/admin/courses/${courseId}`, { method: "DELETE" });
+        showToast("课程班级已删除。", "success", "删除成功");
+        loadAdminListPage("courses", 0);
+    } catch (error) {
+        showToast(error.message, "error", "删除失败");
+    }
+}
+
+function bindAdminCourseForm() {
+    const createBtn = byId("adminCourseCreateBtn");
+    const cancelBtn = byId("adminCourseCancelBtn");
+    const createForm = byId("adminCourseCreateForm");
+    const form = byId("adminCourseForm");
+    const termSelect = byId("adminCourseTerm");
+
+    if (!createBtn || !form) return;
+    fillSemesterSelect(termSelect, false);
+
+    createBtn.addEventListener("click", () => {
+        form.reset();
+        delete form.dataset.editId;
+        const submitBtn = byId("adminCourseSubmitBtn");
+        if (submitBtn) submitBtn.textContent = "创建课程班级";
+        fillSemesterSelect(termSelect, false);
+        createForm?.classList.toggle("hidden");
+    });
+    cancelBtn?.addEventListener("click", () => {
+        form.reset();
+        delete form.dataset.editId;
+        createForm?.classList.add("hidden");
+    });
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const body = {
+            name: data.get("name"),
+            code: data.get("code") || null,
+            term: data.get("term"),
+            className: data.get("className")
+        };
+        try {
+            const editId = form.dataset.editId;
+            if (editId) {
+                await api(`/api/admin/courses/${editId}`, { method: "PUT", body: JSON.stringify({ ...body, active: true }) });
+                showToast("课程班级已更新。", "success", "保存成功");
+            } else {
+                await api("/api/admin/courses", { method: "POST", body: JSON.stringify(body) });
+                showToast("课程班级已创建。", "success", "创建成功");
+            }
+            form.reset();
+            delete form.dataset.editId;
+            createForm?.classList.add("hidden");
+            loadAdminListPage("courses", 0);
+        } catch (error) {
+            showToast(error.message, "error", "操作失败");
+        }
+    });
+}
+
+let joinCourseCache = [];
+
+async function loadJoinCourses(role) {
+    const termFilterId = role === "teacher" ? "teacherJoinTermFilter" : "studentJoinTermFilter";
+    const searchId = role === "teacher" ? "teacherJoinSearch" : "studentJoinSearch";
+    const listId = role === "teacher" ? "teacherJoinList" : "studentJoinList";
+    const term = byId(termFilterId)?.value || "";
+    const keyword = (byId(searchId)?.value || "").toLowerCase();
+    const container = byId(listId);
+    if (!container) return;
+    try {
+        const url = term ? `/api/courses/available?term=${encodeURIComponent(term)}` : "/api/courses/available";
+        joinCourseCache = await api(url);
+        renderJoinCourses(role, joinCourseCache, keyword);
+    } catch (error) {
+        container.innerHTML = `<div class="empty-state">加载失败：${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function renderJoinCourses(role, courses, keyword = "") {
+    const listId = role === "teacher" ? "teacherJoinList" : "studentJoinList";
+    const container = byId(listId);
+    if (!container) return;
+
+    const myCourses = state.courses || [];
+    const myIds = new Set(myCourses.map((c) => String(c.id)));
+
+    const filtered = keyword
+        ? courses.filter((c) => c.name.toLowerCase().includes(keyword) || (c.code || "").toLowerCase().includes(keyword))
+        : courses;
+
+    if (!filtered.length) {
+        container.innerHTML = `<div class="empty-state">暂无可加入的课程班级。</div>`;
+        return;
+    }
+
+    container.innerHTML = filtered.map((c) => {
+        const joined = myIds.has(String(c.id));
+        const teacherTaken = c.teacherName && role === "teacher" && !joined;
+        let statusBadge = "";
+        let actionBtn = "";
+        if (joined) {
+            statusBadge = `<span class="pill status-published">已加入</span>`;
+            actionBtn = `<button class="btn btn-small btn-ghost" data-leave-course="${c.id}">退出</button>`;
+        } else if (teacherTaken) {
+            statusBadge = `<span class="pill status-closed">已有教师</span>`;
+            actionBtn = `<button class="btn btn-small btn-ghost" disabled>无法加入</button>`;
+        } else {
+            actionBtn = `<button class="btn btn-small btn-primary" data-join-course="${c.id}">加入</button>`;
+        }
+        return `
+        <div class="join-course-card">
+            <div class="join-course-top">
+                <div>
+                    <strong>${escapeHtml(c.name)}</strong>
+                    ${c.code ? `<small class="muted"> · ${escapeHtml(c.code)}</small>` : ""}
+                </div>
+                ${statusBadge}
+            </div>
+            <div class="join-course-meta">
+                <span>${escapeHtml(c.term)}</span>
+                <span>${escapeHtml(c.className || "")}</span>
+                <span>教师：${c.teacherName ? escapeHtml(c.teacherName) : "待认领"}</span>
+            </div>
+            <div class="join-course-action">${actionBtn}</div>
+        </div>`;
+    }).join("");
+
+    container.querySelectorAll("[data-join-course]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            try {
+                await api(`/api/courses/${btn.dataset.joinCourse}/join`, { method: "POST" });
+                showToast("已成功加入课程班级。", "success", "加入成功");
+                if (role === "teacher") {
+                    await loadTeacherDashboard("", true);
+                } else {
+                    await loadStudentDashboard("", true);
+                }
+                loadJoinCourses(role);
+            } catch (error) {
+                showToast(error.message, "error", "加入失败");
+            }
+        });
+    });
+    container.querySelectorAll("[data-leave-course]").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+            if (!confirm("确认退出该课程班级？")) return;
+            try {
+                await api(`/api/courses/${btn.dataset.leaveCourse}/leave`, { method: "DELETE" });
+                showToast("已退出课程班级。", "success", "退出成功");
+                if (role === "teacher") {
+                    await loadTeacherDashboard("", true);
+                } else {
+                    await loadStudentDashboard("", true);
+                }
+                loadJoinCourses(role);
+            } catch (error) {
+                showToast(error.message, "error", "退出失败");
+            }
+        });
+    });
+}
+
+function bindJoinPanel(role) {
+    const termFilterId = role === "teacher" ? "teacherJoinTermFilter" : "studentJoinTermFilter";
+    const searchId = role === "teacher" ? "teacherJoinSearch" : "studentJoinSearch";
+    const refreshId = role === "teacher" ? "teacherJoinRefreshBtn" : "studentJoinRefreshBtn";
+    fillSemesterSelect(byId(termFilterId), true);
+    byId(termFilterId)?.addEventListener("change", () => loadJoinCourses(role));
+    byId(searchId)?.addEventListener("input", (e) => renderJoinCourses(role, joinCourseCache, e.target.value.toLowerCase()));
+    byId(refreshId)?.addEventListener("click", () => loadJoinCourses(role));
+}
+
+function bindProfileForm(role) {
+    const formId = role === "teacher" ? "teacherProfileForm" : "studentProfileForm";
+    const msgId = role === "teacher" ? "teacherProfileMessage" : "studentProfileMessage";
+    const form = byId(formId);
+    if (!form) return;
+
+    api("/api/users/me").then((profile) => {
+        const fullNameInput = form.elements.fullName;
+        if (fullNameInput) fullNameInput.value = profile.fullName || "";
+        if (role === "student") {
+            const classNameInput = form.elements.className;
+            if (classNameInput) classNameInput.value = profile.className || "";
+        }
+    }).catch(() => {});
+
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const data = new FormData(form);
+        const body = {};
+        const fullName = data.get("fullName");
+        const className = data.get("className");
+        const oldPassword = data.get("oldPassword");
+        const newPassword = data.get("newPassword");
+        if (fullName !== null) body.fullName = fullName;
+        if (className !== null) body.className = className;
+        if (newPassword) { body.oldPassword = oldPassword; body.newPassword = newPassword; }
+        try {
+            await api("/api/users/me", { method: "PUT", body: JSON.stringify(body) });
+            notify(byId(msgId), "信息已更新。", "success", "保存成功");
+            form.elements.oldPassword && (form.elements.oldPassword.value = "");
+            form.elements.newPassword && (form.elements.newPassword.value = "");
+        } catch (error) {
+            notify(byId(msgId), error.message, "error", "保存失败");
+        }
+    });
 }
 
 function renderAdminAssignments(items) {
@@ -1464,6 +1586,48 @@ function renderAdminAuditLogs(items) {
     `).join("") : `<div class="empty-state">暂无操作日志。</div>`;
 }
 
+function renderAdminAiSettings(settings) {
+    if (!settings || !el.adminAiSettingsForm) {
+        return;
+    }
+    el.adminAiEnabledInput.checked = Boolean(settings.enabled);
+    el.adminAiBaseUrlInput.value = settings.baseUrl || "";
+    el.adminAiModelInput.value = settings.model || "";
+    el.adminAiApiKeyInput.value = "";
+    el.adminAiTimeoutInput.value = String(settings.timeoutSeconds || 20);
+    setMessage(
+        el.adminAiSettingsStatus,
+        settings.apiKeyConfigured
+            ? "当前已配置 API Key，可直接使用 AI 辅助分析。"
+            : "当前未配置 API Key，学生端无法调用 AI 分析。"
+    );
+}
+
+async function onSaveAiSettings(event) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    try {
+        const payload = {
+            enabled: el.adminAiEnabledInput.checked,
+            baseUrl: String(form.get("baseUrl") || "").trim(),
+            model: String(form.get("model") || "").trim(),
+            timeoutSeconds: Number(form.get("timeoutSeconds") || 20)
+        };
+        const apiKey = String(form.get("apiKey") || "").trim();
+        if (apiKey) {
+            payload.apiKey = apiKey;
+        }
+        const settings = await api("/api/admin/ai-settings", {
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        renderAdminAiSettings(settings);
+        notify(el.dashboardMessage, "AI 配置已保存并立即生效。", "success", "保存成功");
+    } catch (error) {
+        notify(el.adminAiSettingsStatus, error.message, "error", "保存失败");
+    }
+}
+
 function renderTeacherStatistics() {
     const courseStats = state.teacherStatistics.courseStats || [];
     const assignmentStats = state.teacherStatistics.assignmentStats || [];
@@ -1477,43 +1641,27 @@ function renderTeacherStatistics() {
     const normalizedKeyword = String(filters.keyword || "").trim().toLowerCase();
 
     const filteredCourseStats = courseStats.filter((item) => {
-        if (filters.courseId && String(item.courseId) !== String(filters.courseId)) {
-            return false;
-        }
-        if (!normalizedKeyword) {
-            return true;
-        }
-        return [
-            item.courseCode,
-            item.courseName,
-            item.term
-        ].some((value) => String(value || "").toLowerCase().includes(normalizedKeyword));
+        if (filters.courseId && String(item.courseId) !== String(filters.courseId)) return false;
+        if (!normalizedKeyword) return true;
+        return [item.courseCode, item.courseName, item.term]
+            .some((v) => String(v || "").toLowerCase().includes(normalizedKeyword));
     });
 
     const filteredAssignmentStats = assignmentStats.filter((item) => {
         const assignment = assignmentMetaById.get(String(item.assignmentId));
-        if (filters.courseId && String(assignment?.courseId || "") !== String(filters.courseId)) {
-            return false;
-        }
-        if (filters.status && String(item.assignmentStatus) !== String(filters.status)) {
-            return false;
-        }
-        if (!normalizedKeyword) {
-            return true;
-        }
-        return [
-            item.assignmentTitle,
-            assignment?.courseCode,
-            assignment?.courseName
-        ].some((value) => String(value || "").toLowerCase().includes(normalizedKeyword));
+        if (filters.courseId && String(assignment?.courseId || "") !== String(filters.courseId)) return false;
+        if (filters.status && String(item.assignmentStatus) !== String(filters.status)) return false;
+        if (!normalizedKeyword) return true;
+        return [item.assignmentTitle, assignment?.courseCode, assignment?.courseName]
+            .some((v) => String(v || "").toLowerCase().includes(normalizedKeyword));
     });
 
     const summary = {
         courseCount: filteredCourseStats.length,
         assignmentCount: filteredAssignmentStats.length,
-        totalSubmissions: filteredAssignmentStats.reduce((sum, item) => sum + (item.totalSubmissions || 0), 0),
+        totalSubmissions: filteredAssignmentStats.reduce((s, i) => s + (i.totalSubmissions || 0), 0),
         averageScore: filteredAssignmentStats.length
-            ? filteredAssignmentStats.reduce((sum, item) => sum + (item.averageScore || 0), 0) / filteredAssignmentStats.length
+            ? filteredAssignmentStats.reduce((s, i) => s + (i.averageScore || 0), 0) / filteredAssignmentStats.length
             : 0
     };
 
@@ -1525,100 +1673,142 @@ function renderTeacherStatistics() {
     }
 
     const toolbar = `
-        <section class="statistics-toolbar-card">
-            <div class="statistics-toolbar">
-                <label class="statistics-filter grow">
-                    <span>搜索统计</span>
+        <div class="stat-page-header">
+            <div class="stat-filter-bar">
+                <div class="stat-filter-search">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                     <input id="statisticsKeywordInput" type="search" placeholder="搜索课程或作业" value="${escapeHtml(filters.keyword)}">
-                </label>
-                <label class="statistics-filter">
-                    <span>课程筛选</span>
-                    <select id="statisticsCourseFilter">
-                        <option value="">全部课程</option>
-                        ${courseOptions}
-                    </select>
-                </label>
-                <label class="statistics-filter">
-                    <span>状态筛选</span>
-                    <select id="statisticsStatusFilter">
-                        <option value="">全部状态</option>
-                        <option value="DRAFT" ${filters.status === "DRAFT" ? "selected" : ""}>草稿</option>
-                        <option value="PUBLISHED" ${filters.status === "PUBLISHED" ? "selected" : ""}>已发布</option>
-                        <option value="CLOSED" ${filters.status === "CLOSED" ? "selected" : ""}>已关闭</option>
-                    </select>
-                </label>
-                <div class="statistics-toolbar-actions">
-                    <button id="statisticsClearButton" type="button" class="btn btn-small btn-ghost">清空筛选</button>
+                </div>
+                <select id="statisticsCourseFilter" class="stat-filter-select">
+                    <option value="">全部课程</option>
+                    ${courseOptions}
+                </select>
+                <select id="statisticsStatusFilter" class="stat-filter-select">
+                    <option value="">全部状态</option>
+                    <option value="DRAFT" ${filters.status === "DRAFT" ? "selected" : ""}>草稿</option>
+                    <option value="PUBLISHED" ${filters.status === "PUBLISHED" ? "selected" : ""}>已发布</option>
+                    <option value="CLOSED" ${filters.status === "CLOSED" ? "selected" : ""}>已关闭</option>
+                </select>
+                <button id="statisticsClearButton" type="button" class="btn btn-small btn-ghost">清空</button>
+            </div>
+            <div class="stat-kpi-row">
+                <div class="stat-kpi-card stat-kpi-blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    <div><strong>${summary.courseCount}</strong><span>课程数</span></div>
+                </div>
+                <div class="stat-kpi-card stat-kpi-purple">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <div><strong>${summary.assignmentCount}</strong><span>作业数</span></div>
+                </div>
+                <div class="stat-kpi-card stat-kpi-teal">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    <div><strong>${summary.totalSubmissions}</strong><span>提交总量</span></div>
+                </div>
+                <div class="stat-kpi-card stat-kpi-orange">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+                    <div><strong>${summary.averageScore.toFixed(1)}</strong><span>平均分</span></div>
                 </div>
             </div>
-            <div class="statistics-summary-grid">
-                ${statMiniCard("课程数", summary.courseCount)}
-                ${statMiniCard("作业数", summary.assignmentCount)}
-                ${statMiniCard("提交总量", summary.totalSubmissions)}
-                ${statMiniCard("平均分", summary.averageScore.toFixed(1))}
-            </div>
-        </section>
+        </div>
     `;
 
     const courseSection = hasCourseStats ? `
-        <section class="statistics-section">
-            <div class="statistics-section-head">
+        <div class="stat-section">
+            <div class="stat-section-head">
                 <h4>课程统计</h4>
-                <span>按课程汇总选课、作业与提交情况，共 ${filteredCourseStats.length} 门</span>
+                <span>共 ${filteredCourseStats.length} 门</span>
             </div>
-            <div class="stack-list">
+            <div class="stat-course-grid">
                 ${filteredCourseStats.length ? filteredCourseStats.map((item) => `
-                    <article class="stack-item">
-                        <div class="inline-header">
-                            <h4>${escapeHtml(item.courseCode)} · ${escapeHtml(item.courseName)}</h4>
+                    <div class="stat-course-card">
+                        <div class="stat-course-card-top">
+                            <div class="stat-course-title">
+                                <strong>${escapeHtml(item.courseCode)}</strong>
+                                <span>${escapeHtml(item.courseName)}</span>
+                            </div>
                             <span class="pill ${item.active ? "status-published" : "status-closed"}">${item.active ? "进行中" : "已停用"}</span>
                         </div>
-                        <div class="stack-meta">
-                            <span>学期：${escapeHtml(item.term)}</span>
-                            <span>班级：${escapeHtml(item.className || "-")}</span>
-                            <span>选课人数：${item.enrollmentCount}</span>
-                            <span>作业总数：${item.assignmentCount}</span>
-                            <span>已发布：${item.publishedAssignmentCount}</span>
-                            <span>提交人数：${item.submittedStudentCount}</span>
-                            <span>提交总量：${item.totalSubmissions}</span>
-                            <span>平均分：${item.averageScore.toFixed(1)}</span>
+                        <div class="stat-course-meta">
+                            <span>${escapeHtml(item.term)}</span>
+                            ${item.className ? `<span>${escapeHtml(item.className)}</span>` : ""}
                         </div>
-                    </article>
+                        <div class="stat-course-nums">
+                            <div class="stat-course-num">
+                                <strong>${item.enrollmentCount}</strong>
+                                <span>选课人数</span>
+                            </div>
+                            <div class="stat-course-num">
+                                <strong>${item.publishedAssignmentCount}<small>/${item.assignmentCount}</small></strong>
+                                <span>已发布作业</span>
+                            </div>
+                            <div class="stat-course-num">
+                                <strong>${item.totalSubmissions}</strong>
+                                <span>提交总量</span>
+                            </div>
+                            <div class="stat-course-num stat-course-num-score">
+                                <strong>${item.averageScore.toFixed(1)}</strong>
+                                <span>平均分</span>
+                            </div>
+                        </div>
+                    </div>
                 `).join("") : `<div class="empty-state">当前筛选下没有课程统计。</div>`}
             </div>
-        </section>
+        </div>
     ` : "";
 
     const assignmentSection = hasAssignmentStats ? `
-        <section class="statistics-section">
-            <div class="statistics-section-head">
+        <div class="stat-section">
+            <div class="stat-section-head">
                 <h4>作业统计</h4>
-                <span>按作业查看评分表现，并支持导出成绩 CSV，共 ${filteredAssignmentStats.length} 个</span>
+                <span>共 ${filteredAssignmentStats.length} 个</span>
             </div>
-            <div class="stack-list">
+            <div class="stat-assignment-list">
                 ${filteredAssignmentStats.length ? filteredAssignmentStats.map((item) => {
                     const assignment = assignmentMetaById.get(String(item.assignmentId));
+                    const score = item.averageScore || 0;
+                    const passRate = item.totalSubmissions > 0
+                        ? Math.round((item.distinctStudentCount / item.totalSubmissions) * 100)
+                        : 0;
+                    const scoreWidth = Math.min(100, Math.round(score));
+                    const scoreColor = score >= 80 ? "var(--success)" : score >= 60 ? "var(--warning)" : "var(--danger)";
                     return `
-                    <article class="stack-item">
-                        <div class="inline-header">
-                            <h4>${escapeHtml(item.assignmentTitle)}</h4>
+                    <div class="stat-assignment-card">
+                        <div class="stat-assignment-top">
+                            <div class="stat-assignment-title">
+                                <h4>${escapeHtml(item.assignmentTitle)}</h4>
+                                <span class="stat-assignment-course">${escapeHtml(assignment?.courseCode ? `${assignment.courseCode} · ${assignment.courseName}` : "-")}</span>
+                            </div>
                             <span class="pill ${statusClass(item.assignmentStatus)}">${translateStatus(item.assignmentStatus)}</span>
                         </div>
-                        <div class="stack-meta">
-                            <span>课程：${escapeHtml(assignment?.courseCode ? `${assignment.courseCode} · ${assignment.courseName}` : "-")}</span>
-                            <span>提交次数：${item.totalSubmissions}</span>
-                            <span>参与学生：${item.distinctStudentCount}</span>
-                            <span>平均分：${item.averageScore.toFixed(1)}</span>
+                        <div class="stat-assignment-nums">
+                            <div class="stat-num-item">
+                                <span>提交次数</span>
+                                <strong>${item.totalSubmissions}</strong>
+                            </div>
+                            <div class="stat-num-item">
+                                <span>参与学生</span>
+                                <strong>${item.distinctStudentCount}</strong>
+                            </div>
+                            <div class="stat-num-item">
+                                <span>平均分</span>
+                                <strong style="color:${scoreColor}">${score.toFixed(1)}</strong>
+                            </div>
                         </div>
-                        <div class="stack-actions">
+                        <div class="stat-score-bar-wrap">
+                            <div class="stat-score-bar-track">
+                                <div class="stat-score-bar-fill" style="width:${scoreWidth}%;background:${scoreColor}"></div>
+                            </div>
+                            <span class="stat-score-bar-label">${score.toFixed(1)} / 100</span>
+                        </div>
+                        <div class="stat-assignment-actions">
                             <button class="btn btn-small btn-primary" data-stat-submission-assignment-id="${item.assignmentId}">查看提交</button>
                             <button class="btn btn-small btn-secondary" data-grade-export-id="${item.assignmentId}">导出成绩 CSV</button>
                         </div>
-                    </article>
+                    </div>
                 `;
                 }).join("") : `<div class="empty-state">当前筛选下没有作业统计。</div>`}
             </div>
-        </section>
+        </div>
     ` : "";
 
     el.assignmentStatistics.innerHTML = `${toolbar}${courseSection}${assignmentSection}`;
@@ -1706,7 +1896,8 @@ function renderTeacherSubmissions(items) {
 
     el.teacherSubmissions.querySelectorAll("[data-submission-rejudge-id]").forEach((button) => {
         button.addEventListener("click", async () => {
-            if (!window.confirm("确定重新判题这条提交记录吗？")) {
+            const confirmed = await showConfirmDialog("重新判题", "确定重新判题这条提交记录吗？");
+            if (!confirmed) {
                 return;
             }
             try {
@@ -1731,7 +1922,7 @@ function renderStudentAssignments(assignments) {
                 <h4>${escapeHtml(item.title)}</h4>
                 <span class="pill ${statusClass(item.status)}">${translateStatus(item.status)}</span>
             </div>
-            <p>${escapeHtml(item.description)}</p>
+            <p>${escapeMultilineText(item.description)}</p>
             <div class="card-meta">
                 ${item.courseName ? `<span>课程：${escapeHtml(item.courseName)}</span>` : ""}
                 <span>教师：${escapeHtml(item.teacherName)}</span>
@@ -1856,6 +2047,8 @@ function renderSubmissionDetail(target, submission) {
         target.textContent = "暂无可展示的评测详情。";
         return;
     }
+    const aiPanel = target === el.submissionDetail ? el.studentAiDiagnosisPanel : null;
+    resetAiDiagnosisPanel(aiPanel);
     const caseResults = submission.caseResults || [];
     const cases = caseResults.length ? caseResults.map((item) => `
         <article class="case-result-card">
@@ -1883,11 +2076,102 @@ function renderSubmissionDetail(target, submission) {
                 <span>分数：${submission.score ?? 0}</span>
                 <span>提交时间：${formatDateTime(submission.submittedAt)}</span>
             </div>
+            ${aiPanel ? `<div class="stack-actions">
+                <button class="btn btn-small btn-secondary" data-ai-diagnosis-id="${submission.id}" ${submission.status === "PENDING" ? "disabled" : ""}>
+                    ${submission.status === "PENDING" ? "评测中" : "AI 辅助分析"}
+                </button>
+            </div>` : ""}
         </article>
         <article class="detail-block"><strong>编译信息</strong><pre>${escapeHtml(submission.compileMessage || "")}</pre></article>
         <article class="detail-block"><strong>运行信息</strong><pre>${escapeHtml(submission.runtimeMessage || "")}</pre></article>
         <article class="detail-block"><strong>提交源码</strong><pre>${escapeHtml(submission.sourceCode || "")}</pre></article>
         ${cases}
+    `;
+
+    const aiButton = target.querySelector("[data-ai-diagnosis-id]");
+    if (aiButton) {
+        aiButton.addEventListener("click", async () => {
+            await loadAiDiagnosis(submission.id, aiPanel, aiButton);
+        });
+    }
+}
+
+function resetAiDiagnosisPanel(target) {
+    if (!target) {
+        return;
+    }
+    target.className = "detail-panel empty-state";
+    target.textContent = "发起 AI 辅助分析后，这里会显示问题概述、修改建议和知识点提示。";
+}
+
+async function loadAiDiagnosis(submissionId, target, button) {
+    if (!target) {
+        return;
+    }
+    const originalText = button?.textContent;
+    if (button) {
+        button.disabled = true;
+        button.textContent = "分析中...";
+    }
+    target.className = "detail-panel";
+    target.innerHTML = `<div class="detail-block"><strong>AI 辅助分析</strong><p class="detail-copy">正在生成分析结果，请稍候。</p></div>`;
+    try {
+        const diagnosis = await api(`/api/submissions/${submissionId}/ai-diagnosis`, { method: "POST" });
+        renderAiDiagnosis(target, diagnosis);
+        showToast("AI 辅助分析已生成。", "success", "分析完成");
+    } catch (error) {
+        target.className = "detail-panel empty-state";
+        target.textContent = error.message || "AI 分析暂时不可用，请稍后重试。";
+        showToast(error.message || "AI 分析暂时不可用，请稍后重试。", "error", "分析失败");
+    } finally {
+        if (button) {
+            button.disabled = false;
+            button.textContent = originalText || "AI 辅助分析";
+        }
+    }
+}
+
+function renderAiDiagnosis(target, diagnosis) {
+    const possibleCauses = renderAiList(diagnosis.possibleCauses, "暂无明确原因分析。");
+    const fixSuggestions = renderAiList(diagnosis.fixSuggestions, "暂无修改建议。");
+    const knowledgePoints = renderAiList(diagnosis.knowledgePoints, "暂无相关知识点提示。");
+
+    target.className = "detail-panel";
+    target.innerHTML = `
+        <article class="detail-block">
+            <div class="inline-header">
+                <h4>AI 辅助分析</h4>
+                <span class="pill ${statusClass(diagnosis.status)}">${translateStatus(diagnosis.status)}</span>
+            </div>
+            <p class="detail-copy">${escapeHtml(diagnosis.summary || "暂无分析摘要。")}</p>
+        </article>
+        <article class="detail-block">
+            <strong>可能原因</strong>
+            ${possibleCauses}
+        </article>
+        <article class="detail-block">
+            <strong>修改建议</strong>
+            ${fixSuggestions}
+        </article>
+        <article class="detail-block">
+            <strong>相关知识点</strong>
+            ${knowledgePoints}
+        </article>
+        <article class="detail-block">
+            <strong>说明</strong>
+            <p class="detail-copy">${escapeHtml(diagnosis.disclaimer || "AI 分析仅供参考。")}</p>
+        </article>
+    `;
+}
+
+function renderAiList(items, emptyText) {
+    if (!items || !items.length) {
+        return `<p class="detail-copy">${escapeHtml(emptyText)}</p>`;
+    }
+    return `
+        <ul class="detail-list">
+            ${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}
+        </ul>
     `;
 }
 
@@ -1951,21 +2235,98 @@ function collectTestCases() {
 
 function switchAuthTab(tab) {
     const isLogin = tab === "login";
-    el.loginTabButton.classList.toggle("active", isLogin);
-    el.registerTabButton.classList.toggle("active", !isLogin);
     el.loginForm.classList.toggle("hidden", !isLogin);
     el.registerForm.classList.toggle("hidden", isLogin);
-    el.authTitle.textContent = isLogin ? "登录平台" : "注册账号";
-    el.authSubtitle.textContent = isLogin ? "登录后进入对应工作台。" : "注册完成后自动登录。";
-    setMessage(el.authMessage, isLogin ? "可直接使用演示账号登录。" : "注册后会自动登录。");
+    el.authTitle.textContent = isLogin ? "欢迎回来" : "创建账号";
+    el.authSubtitle.textContent = isLogin ? "登录后进入对应工作台" : "注册完成后自动登录";
+    setMessage(el.authMessage, isLogin ? "点击下方演示账号可快速填入。" : "注册后会自动登录。");
 }
 
 function useDemoAccount(role) {
     const demo = DEMO_ACCOUNTS[role];
-    navigate(ROUTES.login);
+    const roleLabel = role === "admin" ? "管理员" : role === "teacher" ? "教师" : "学生";
+    // 确保当前在登录 tab
+    if (el.loginForm?.classList.contains("hidden")) {
+        switchAuthTab("login");
+    }
     el.loginUsernameInput.value = demo.username;
     el.loginPasswordInput.value = demo.password;
-    notify(el.authMessage, `已填入${role === "teacher" ? "教师" : "学生"}示例账号。`, "success", "快捷填充");
+    notify(el.authMessage, `已填入${roleLabel}演示账号，点击登录即可进入。`, "success", "快捷填充");
+}
+
+function showResetPasswordDialog() {
+    return new Promise((resolve) => {
+        if (!el.resetPasswordDialog || !el.resetPasswordInput) {
+            resolve(null);
+            return;
+        }
+        const form = el.resetPasswordDialog.querySelector("form");
+        let settled = false;
+        const settle = (value) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            form?.removeEventListener("submit", onSubmit);
+            el.resetPasswordCancelButton?.removeEventListener("click", onCancel);
+            el.resetPasswordDialog.removeEventListener("close", onClose);
+            if (el.resetPasswordDialog.open) {
+                el.resetPasswordDialog.close();
+            }
+            resolve(value);
+        };
+        const onSubmit = (event) => {
+            event.preventDefault();
+            settle(el.resetPasswordInput.value);
+        };
+        const onCancel = () => settle(null);
+        const onClose = () => settle(null);
+
+        el.resetPasswordInput.value = "";
+        form?.addEventListener("submit", onSubmit);
+        el.resetPasswordCancelButton?.addEventListener("click", onCancel);
+        el.resetPasswordDialog.addEventListener("close", onClose);
+        el.resetPasswordDialog.showModal();
+        el.resetPasswordInput.focus();
+    });
+}
+
+function showConfirmDialog(title, message) {
+    return new Promise((resolve) => {
+        if (!el.confirmDialog) {
+            resolve(false);
+            return;
+        }
+        let settled = false;
+        const settle = (value) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            el.confirmDialogOkButton?.removeEventListener("click", onOk);
+            el.confirmDialogCancelButton?.removeEventListener("click", onCancel);
+            el.confirmDialog.removeEventListener("close", onClose);
+            if (el.confirmDialog.open) {
+                el.confirmDialog.close();
+            }
+            resolve(value);
+        };
+        const onOk = () => settle(true);
+        const onCancel = () => settle(false);
+        const onClose = () => settle(false);
+
+        if (el.confirmDialogTitle) {
+            el.confirmDialogTitle.textContent = title || "确认操作";
+        }
+        if (el.confirmDialogMessage) {
+            el.confirmDialogMessage.textContent = message || "";
+        }
+        el.confirmDialogOkButton?.addEventListener("click", onOk);
+        el.confirmDialogCancelButton?.addEventListener("click", onCancel);
+        el.confirmDialog.addEventListener("close", onClose);
+        el.confirmDialog.showModal();
+        el.confirmDialogOkButton?.focus();
+    });
 }
 
 function acceptAuth(auth) {
@@ -1998,27 +2359,13 @@ function resetWorkspace() {
             status: ""
         }
     };
-    state.selectedCourseId = null;
-    state.editingCourseId = null;
-    state.selectedAvailableStudentId = null;
-    state.selectedEnrolledStudentId = null;
-    state.selectedCourseEnrollments = [];
-    resetCourseForm();
     if (el.overviewCards) {
         el.overviewCards.innerHTML = "";
     }
-    if (el.teacherCourses) {
-        el.teacherCourses.innerHTML = `<div class="empty-state">登录教师账号后显示课程列表。</div>`;
-    }
-    if (el.courseEnrollmentList) {
-        el.courseEnrollmentList.innerHTML = `<div class="empty-state">选择课程后显示已选学生。</div>`;
-    }
-    if (el.availableStudentList) {
-        el.availableStudentList.innerHTML = `<div class="empty-state">选择课程后显示可加入学生。</div>`;
-    }
-    if (el.selectedCourseTitle) {
-        el.selectedCourseTitle.textContent = "选择课程后管理选课";
-    }
+    const homeDue = byId("teacherHomeDue");
+    if (homeDue) homeDue.innerHTML = `<div class="empty-state">登录教师账号后显示待截止作业。</div>`;
+    const homeActivity = byId("teacherHomeActivity");
+    if (homeActivity) homeActivity.innerHTML = `<div class="empty-state">登录教师账号后显示提交记录。</div>`;
     if (el.teacherAssignments) {
         el.teacherAssignments.innerHTML = `<div class="empty-state">登录教师账号后显示作业列表。</div>`;
     }
@@ -2048,44 +2395,9 @@ function resetWorkspace() {
         el.submissionDetail.className = "detail-panel empty-state";
         el.submissionDetail.textContent = "选择一条提交记录后，这里会显示编译结果、运行信息和每个测试用例的通过情况。";
     }
-}
-
-async function refreshSelectedCourseEnrollments() {
-    if (!el.courseEnrollmentList) {
-        return;
-    }
-    const courseId = state.selectedCourseId;
-    if (!courseId) {
-        state.selectedCourseEnrollments = [];
-        state.selectedAvailableStudentId = null;
-        state.selectedEnrolledStudentId = null;
-        if (el.selectedCourseTitle) {
-            el.selectedCourseTitle.textContent = "选择课程后管理选课";
-        }
-        renderAvailableStudents([]);
-        renderCourseEnrollments([]);
-        return;
-    }
-    try {
-        const enrollments = await api(`/api/courses/${courseId}/enrollments`);
-        state.selectedCourseEnrollments = enrollments;
-        const selectedCourse = state.courses.find((course) => String(course.id) === String(courseId));
-        if (el.selectedCourseTitle) {
-            el.selectedCourseTitle.textContent = selectedCourse
-                ? `${selectedCourse.code} · ${selectedCourse.name}（${selectedCourse.className || "未设置班级"}）`
-                : "当前课程";
-        }
-        const enrolledIds = new Set(enrollments.map((item) => String(item.studentId)));
-        renderAvailableStudents(state.students.filter((student) => !enrolledIds.has(String(student.id))));
-        renderCourseEnrollments(enrollments);
-    } catch (error) {
-        state.selectedCourseEnrollments = [];
-        if (el.selectedCourseTitle) {
-            el.selectedCourseTitle.textContent = "选择课程后管理选课";
-        }
-        renderAvailableStudents([]);
-        renderCourseEnrollments([]);
-        notify(el.dashboardMessage, error.message, "error", "加载选课失败");
+    if (el.studentAiDiagnosisPanel) {
+        el.studentAiDiagnosisPanel.className = "detail-panel empty-state";
+        el.studentAiDiagnosisPanel.textContent = "发起 AI 辅助分析后，这里会显示问题概述、修改建议和知识点提示。";
     }
 }
 
@@ -2196,7 +2508,9 @@ function focusSubmissionEditor() {
 
 function startSubmissionPolling(submissionId, teacherMode) {
     stopSubmissionPolling();
+    state.submissionPollAttempts = 0;
     state.submissionPollTimer = window.setInterval(async () => {
+        state.submissionPollAttempts += 1;
         try {
             const submission = await api(`/api/submissions/${submissionId}`);
             renderSubmissionDetail(teacherMode ? el.teacherSubmissionDetail : el.submissionDetail, submission);
@@ -2211,6 +2525,11 @@ function startSubmissionPolling(submissionId, teacherMode) {
                     await loadStudentDashboard("评测已完成，结果已刷新。", true);
                 }
                 showToast("后台评测已完成。", "success", "评测完成");
+                return;
+            }
+            if (state.submissionPollAttempts >= 40) {
+                stopSubmissionPolling();
+                showToast("评测超时，请手动刷新查看结果。", "error", "评测超时");
             }
         } catch (error) {
             stopSubmissionPolling();
@@ -2223,6 +2542,7 @@ function stopSubmissionPolling() {
         window.clearInterval(state.submissionPollTimer);
         state.submissionPollTimer = null;
     }
+    state.submissionPollAttempts = 0;
 }
 
 function normalizeDateTime(value) {
@@ -2279,6 +2599,10 @@ function escapeHtml(value) {
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#39;");
+}
+
+function escapeMultilineText(value) {
+    return escapeHtml(value).replaceAll("\n", "<br>");
 }
 
 async function downloadAssignmentGrades(assignmentId) {

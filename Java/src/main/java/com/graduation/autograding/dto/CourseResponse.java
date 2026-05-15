@@ -19,8 +19,8 @@ public record CourseResponse(
                 course.getName(),
                 course.getTerm(),
                 course.getClassName(),
-                course.getTeacher().getId(),
-                course.getTeacher().getUsername(),
+                course.getTeacher() != null ? course.getTeacher().getId() : null,
+                course.getTeacher() != null ? course.getTeacher().getUsername() : null,
                 course.isActive()
         );
     }
